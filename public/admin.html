@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+#setText { background:#f59e0b;color:white; }
+input, textarea { font-size:1.2rem; padding:8px; width:300px; text-align:center; border-radius:6px; border:1px solid #ccc; }
+textarea { resize: vertical; height: 80px; }
+</style>
+</head>
+<body>
+<h1>目前號碼：<span id="number">0</span></h1>
+
+
+<div>
+<button id="prev">上一號</button>
+<button id="next">下一號</button>
+</div>
+
+
+<div style="margin-top:20px;">
+<input type="number" id="manualNumber" placeholder="輸入號碼" />
+<button id="setNumber">設定號碼</button>
+</div>
+
+
+<div style="margin-top:20px;">
+<textarea id="customText" placeholder="輸入中文文字，可換行"></textarea>
+<button id="setText">設定文字</button>
+</div>
+
+
+<script>
+const socket = io();
+const numberEl = document.getElementById("number");
+let token = localStorage.getItem("adminToken") || "";
+
+
+if(!token){
+token = prompt("請輸入管理密碼（預設 1234）") || "";
+localStorage.setItem("adminToken", token);
+}
+
+
+socket.on("update", num => numberEl.textContent = num);
+
+
+async function changeNumber(direction){
+await fetch("/change-number",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token,direction})});
+}
+
+
+async function setNumber(){
+const num = document.getElementById("manualNumber").value;
+await fetch("/set-number",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token,number:num})});
+document.getElementById("manualNumber").value="";
+}
+
+
+async function setText(){
+const text = document.getElementById("customText").value;
+await fetch("/set-text",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token,text})});
+document.getElementById("customText").value="";
+}
+
+
+document.getElementById("next").onclick=()=>changeNumber("next");
+document.getElementById("prev").onclick=()=>changeNumber("prev");
+document.getElementById("setNumber").onclick=setNumber;
+document.getElementById("setText").onclick=setText;
+</script>
+</body>
+</html>
