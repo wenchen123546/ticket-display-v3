@@ -5,9 +5,8 @@ const passwordInput = document.getElementById("password-input");
 const loginButton = document.getElementById("login-button");
 const loginError = document.getElementById("login-error");
 const numberEl = document.getElementById("number");
-const statusBar = document.getElementById("status-bar"); // 【新增】
+const statusBar = document.getElementById("status-bar");
 
-// 抓取 GUI 元素
 const passedListUI = document.getElementById("passed-list-ui");
 const newPassedNumberInput = document.getElementById("new-passed-number");
 const addPassedBtn = document.getElementById("add-passed-btn");
@@ -19,10 +18,13 @@ const newLinkUrlInput = document.getElementById("new-link-url");
 const addFeaturedBtn = document.getElementById("add-featured-btn");
 const saveFeaturedButton = document.getElementById("saveFeaturedContents");
 
+const soundToggle = document.getElementById("sound-toggle"); // 【新增】
+
 // --- 2. 全域變數 ---
 let token = "";
 let localPassedNumbers = [];
 let localFeaturedContents = [];
+// (移除 LocalStorage 的 TOKEN_KEY)
 
 // --- 3. Socket.io ---
 const socket = io({ autoConnect: false });
@@ -80,10 +82,8 @@ passwordInput.addEventListener("keyup", (event) => {
 // --- 5. 控制台 Socket 監聽器 ---
 socket.on("connect", () => { 
     console.log("Socket.io 已連接");
-    statusBar.classList.remove("visible"); // 【新增】 隱藏提示條
+    statusBar.classList.remove("visible");
 });
-
-// 【新增】 監聽斷線事件
 socket.on("disconnect", () => {
     console.warn("Socket.io 已斷線");
     statusBar.classList.add("visible");
@@ -97,6 +97,12 @@ socket.on("updatePassed", (numbers) => {
 socket.on("updateFeaturedContents", (contents) => {
     localFeaturedContents = contents;
     renderFeaturedListUI(); 
+});
+
+// 【新增】 監聽音效設定，確保 UI 同步
+socket.on("updateSoundSetting", (isEnabled) => {
+    console.log("收到音效設定:", isEnabled);
+    soundToggle.checked = isEnabled;
 });
 
 
@@ -125,7 +131,7 @@ async function apiRequest(endpoint, body) {
     }
 }
 
-// --- 7. GUI 渲染函式 ---
+// --- 7. GUI 渲染函式 (保持不變) ---
 function renderPassedListUI() {
     passedListUI.innerHTML = ""; 
     if (localPassedNumbers.length > 5) {
@@ -134,16 +140,11 @@ function renderPassedListUI() {
     localPassedNumbers.forEach((number, index) => {
         const li = document.createElement("li");
         li.innerHTML = `<span>${number}</span>`;
-        
         const deleteBtn = document.createElement("button");
         deleteBtn.type = "button";
         deleteBtn.className = "delete-item-btn";
         deleteBtn.textContent = "×";
-        deleteBtn.onclick = () => {
-            localPassedNumbers.splice(index, 1); 
-            renderPassedListUI(); 
-        };
-        
+        deleteBtn.onclick = () => { localPassedNumbers.splice(index, 1); renderPassedListUI(); };
         li.appendChild(deleteBtn);
         passedListUI.appendChild(li);
     });
@@ -153,22 +154,17 @@ function renderFeaturedListUI() {
     localFeaturedContents.forEach((item, index) => {
         const li = document.createElement("li");
         li.innerHTML = `<span>${item.linkText}<br><small style="color: #666;">${item.linkUrl}</small></span>`;
-        
         const deleteBtn = document.createElement("button");
         deleteBtn.type = "button";
         deleteBtn.className = "delete-item-btn";
         deleteBtn.textContent = "×";
-        deleteBtn.onclick = () => {
-            localFeaturedContents.splice(index, 1); 
-            renderFeaturedListUI(); 
-        };
-        
+        deleteBtn.onclick = () => { localFeaturedContents.splice(index, 1); renderFeaturedListUI(); };
         li.appendChild(deleteBtn);
         featuredListUI.appendChild(li);
     });
 }
 
-// --- 8. 控制台按鈕功能 ---
+// --- 8. 控制台按鈕功能 (保持不變) ---
 async function changeNumber(direction) {
     await apiRequest("/change-number", { direction });
 }
@@ -176,31 +172,21 @@ async function setNumber() {
     const num = document.getElementById("manualNumber").value;
     if (num === "") return;
     const success = await apiRequest("/set-number", { number: num });
-    if (success) {
-        document.getElementById("manualNumber").value = "";
-    }
+    if (success) { document.getElementById("manualNumber").value = ""; }
 }
 async function savePassedNumbers() {
     savePassedButton.disabled = true;
     savePassedButton.textContent = "儲存中...";
-
     const success = await apiRequest("/set-passed-numbers", { numbers: localPassedNumbers });
-    if (success) {
-        alert("過號列表已儲存。");
-    }
-    
+    if (success) { alert("過號列表已儲存。"); }
     savePassedButton.disabled = false;
     savePassedButton.textContent = "儲存過號列表";
 }
 async function saveFeaturedContents() {
     saveFeaturedButton.disabled = true;
     saveFeaturedButton.textContent = "儲存中...";
-
     const success = await apiRequest("/set-featured-contents", { contents: localFeaturedContents });
-    if (success) {
-        alert("精選連結已儲存。");
-    }
-
+    if (success) { alert("精選連結已儲存。"); }
     saveFeaturedButton.disabled = false;
     saveFeaturedButton.textContent = "儲存精選連結";
 }
@@ -224,7 +210,7 @@ async function resetAll() {
     if (success) { document.getElementById("manualNumber").value = ""; alert("已全部重置。"); }
 }
 
-// --- 9. 綁定按鈕事件 ---
+// --- 9. 綁定按鈕事件 (保持不變) ---
 document.getElementById("next").onclick = () => changeNumber("next");
 document.getElementById("prev").onclick = () => changeNumber("prev");
 document.getElementById("setNumber").onclick = setNumber;
@@ -235,14 +221,10 @@ document.getElementById("resetFeaturedContents").onclick = resetFeaturedContents
 document.getElementById("resetPassed").onclick = resetPassed;
 document.getElementById("resetAll").onclick = resetAll;
 
-// 綁定 GUI 新增按鈕
 addPassedBtn.onclick = () => {
     const num = Number(newPassedNumberInput.value);
     if (num > 0 && !localPassedNumbers.includes(num)) {
-        if (localPassedNumbers.length >= 5) {
-            alert("過號列表最多只能 5 筆。");
-            return;
-        }
+        if (localPassedNumbers.length >= 5) { alert("過號列表最多只能 5 筆。"); return; }
         localPassedNumbers.push(num);
         renderPassedListUI();
         newPassedNumberInput.value = "";
@@ -250,16 +232,11 @@ addPassedBtn.onclick = () => {
         alert("請輸入有效的、且尚未在列表中的號碼。");
     }
 };
-
 addFeaturedBtn.onclick = () => {
     const text = newLinkTextInput.value.trim();
     const url = newLinkUrlInput.value.trim();
-    
     if (text && url) {
-        if (!url.startsWith('http://') && !url.startsWith('https://')) {
-            alert("網址請務必以 http:// 或 https:// 開頭。");
-            return;
-        }
+        if (!url.startsWith('http://') && !url.startsWith('https://')) { alert("網址請務必以 http:// 或 https:// 開頭。"); return; }
         localFeaturedContents.push({ linkText: text, linkUrl: url });
         renderFeaturedListUI();
         newLinkTextInput.value = "";
@@ -269,19 +246,20 @@ addFeaturedBtn.onclick = () => {
     }
 };
 
-// --- 10. 【新增】 綁定 Enter 鍵 ---
+// --- 10. 綁定 Enter 鍵 (保持不變) ---
 newPassedNumberInput.addEventListener("keyup", (event) => {
-    if (event.key === "Enter") {
-        addPassedBtn.click(); // 觸發「+」按鈕的點擊
-    }
+    if (event.key === "Enter") { addPassedBtn.click(); }
 });
 newLinkTextInput.addEventListener("keyup", (event) => {
-    if (event.key === "Enter") {
-        newLinkUrlInput.focus(); // 跳到下一個輸入框
-    }
+    if (event.key === "Enter") { newLinkUrlInput.focus(); }
 });
 newLinkUrlInput.addEventListener("keyup", (event) => {
-    if (event.key === "Enter") {
-        addFeaturedBtn.click(); // 觸發「+」按鈕的點擊
-    }
+    if (event.key === "Enter") { addFeaturedBtn.click(); }
+});
+
+// --- 11. 【新增】 綁定音效開關 ---
+soundToggle.addEventListener("change", () => {
+    const isEnabled = soundToggle.checked;
+    // 呼叫 API，伺服器會廣播回來更新所有客戶端 (包含自己)
+    apiRequest("/set-sound-enabled", { enabled: isEnabled });
 });
