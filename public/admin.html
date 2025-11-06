@@ -70,6 +70,8 @@ body {
   padding-top: 30px;
 }
 
+/* ( ... 此處的 CSS 樣式與上一版完全相同 ... ) */
+
 /* 標題 */
 #admin-panel h1 {
   font-size: 3rem;
@@ -160,7 +162,6 @@ textarea {
 
 <div id="admin-panel">
   <h1>目前號碼：<span id="number">0</span></h1>
-
   <div class="control-group">
     <button id="prev">上一號</button>
     <button id="next">下一號</button>
@@ -204,7 +205,7 @@ textarea {
   let token = ""; // 登入成功後，token 會存在這裡
 
   // --- 
-  // 關鍵：Socket.io 預設不自動連線
+  // Socket.io 預設不自動連線
   // --- 
   const socket = io({ autoConnect: false });
 
@@ -214,7 +215,7 @@ textarea {
   function showLogin() {
     loginContainer.style.display = "block";
     adminPanel.style.display = "none";
-    localStorage.removeItem("adminToken"); // 顯示登入畫面時，清除舊 token
+    localStorage.removeItem("adminToken"); // 顯示登入時，清除任何舊的 token
     document.title = "後台管理 - 登入";
   }
   
@@ -223,7 +224,7 @@ textarea {
     adminPanel.style.display = "block";
     document.title = "後台管理 - 控制台";
     
-    // 關鍵：登入成功後，才手動連接 Socket.io
+    // 登入成功後，才手動連接 Socket.io
     socket.connect(); 
   }
 
@@ -238,10 +239,10 @@ textarea {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token: tokenToCheck })
       });
-      return res.ok; // 成功 (200) 回傳 true, 失敗 (403) 回傳 false
+      return res.ok; 
     } catch (err) {
       console.error("checkToken 失敗:", err);
-      return false; // 網路錯誤
+      return false; 
     }
   }
 
@@ -254,11 +255,11 @@ textarea {
     
     if (isValid) {
       token = tokenToCheck; // 設定全域 token
-      localStorage.setItem("adminToken", token); // 存入 localStorage 供下次使用
+      // localStorage.setItem("adminToken", token); // <-- 【修改】 移除此行，不再儲存 token
       showPanel(); // 顯示控制台
     } else {
       loginError.textContent = "密碼錯誤";
-      showLogin(); // 顯示登入畫面
+      showLogin(); // 顯示登入畫面 (showLogin 已經會清除 localStorage)
     }
   }
   
@@ -266,12 +267,8 @@ textarea {
   // 頁面載入時的檢查
   // --- 
   document.addEventListener("DOMContentLoaded", () => {
-    const storedToken = localStorage.getItem("adminToken");
-    if (storedToken) {
-      attemptLogin(storedToken); // 嘗試用舊 token 自動登入
-    } else {
-      showLogin(); // 沒有舊 token，顯示登入畫面
-    }
+    // 【修改】移除自動登入檢查，一律顯示登入畫面
+    showLogin(); 
   });
 
   // --- 
@@ -305,7 +302,7 @@ textarea {
   });
 
   // --- 
-  // 統一的 API 請求函式 (已修改)
+  // 統一的 API 請求函式 (不變)
   // --- 
   async function apiRequest(endpoint, body) {
     try {
@@ -318,8 +315,7 @@ textarea {
       if (!res.ok) {
         const errorData = await res.json();
         
-        // 關鍵：如果 Token 在操作途中失效 (例如伺服器重啟換密碼)
-        // 立刻將使用者踢回登入畫面
+        // 如果 Token 失效，踢回登入畫面
         if (res.status === 403) {
           alert("密碼驗證失敗或 Token 已過期，請重新登入。");
           showLogin(); // 踢回登入
