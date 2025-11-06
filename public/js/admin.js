@@ -8,6 +8,10 @@ const numberEl = document.getElementById("number");
 const passedNumbersInputEl = document.getElementById("passedNumbersInput");
 const featuredEditorInput = document.getElementById("featuredEditorInput");
 
+// 【新增】 抓取儲存按鈕
+const savePassedButton = document.getElementById("savePassedNumbers");
+const saveFeaturedButton = document.getElementById("saveFeaturedContents");
+
 // --- 2. 全域變數 ---
 let token = "";
 const TOKEN_KEY = "adminToken"; 
@@ -143,21 +147,33 @@ async function setNumber() {
 }
 
 async function savePassedNumbers() {
+    // 【修復】 禁用按鈕
+    savePassedButton.disabled = true;
+    savePassedButton.textContent = "儲存中...";
+
     const text = passedNumbersInputEl.value;
     const numbersArray = text.split(",")
         .map((n) => n.trim())
         .filter((n) => n.length > 0)
         .map((n) => Number(n));
         
-    const limitedNumbers = numbersArray.slice(0, 5); // 限制數量
+    const limitedNumbers = numbersArray.slice(0, 5); 
 
     const success = await apiRequest("/set-passed-numbers", { numbers: limitedNumbers });
     if (success) {
         alert("過號列表已儲存。");
     }
+    
+    // 【修復】 恢復按鈕
+    savePassedButton.disabled = false;
+    savePassedButton.textContent = "儲存過號列表";
 }
 
 async function saveFeaturedContents() {
+    // 【修復】 禁用按鈕
+    saveFeaturedButton.disabled = true;
+    saveFeaturedButton.textContent = "儲存中...";
+
     const text = featuredEditorInput.value;
     const contentsArray = text
         .split('\n')
@@ -175,12 +191,15 @@ async function saveFeaturedContents() {
     if (success) {
         alert("精選連結已儲存。");
     }
+
+    // 【修復】 恢復按鈕
+    saveFeaturedButton.disabled = false;
+    saveFeaturedButton.textContent = "儲存精選連結";
 }
 
 // --- 重置功能 ---
 
 async function resetNumber() {
-    // 【修改】 移除了括號中的提示
     if (!confirm("確定要將「目前號碼」重置為 0 嗎？")) return;
     
     const success = await apiRequest("/set-number", { number: 0 });
