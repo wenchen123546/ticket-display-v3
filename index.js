@@ -34,7 +34,6 @@ const authMiddleware = (req, res, next) => {
 function addNumberToPassed(num) {
   if (num <= 0) return; 
   if (passedNumbers.includes(num)) return; 
-
   passedNumbers.unshift(num);
   if (passedNumbers.length > MAX_PASSED_NUMBERS) {
     passedNumbers.pop();
@@ -42,10 +41,27 @@ function addNumberToPassed(num) {
   io.emit("updatePassed", passedNumbers);
 }
 
+// ========================================================
+// === 
+// ===               👇👇 新增的 API 路由 👇👇
+// === 
+// ========================================================
+
+// 僅用於登入時檢查 Token
+app.post("/check-token", authMiddleware, (req, res) => {
+  // authMiddleware 已經完成了驗證工作
+  // 如果程式能執行到這裡，代表 token 是有效的
+  res.json({ success: true, message: "Token is valid" });
+});
+
+// ========================================================
+
+
 // --- API 路由 ---
 
 // 下一號 / 上一號
 app.post("/change-number", authMiddleware, (req, res) => {
+  // (此處及以下所有路由的程式碼... 保持不變)
   const { direction } = req.body;
   if (direction === "next") {
     addNumberToPassed(currentNumber);
@@ -74,51 +90,28 @@ app.post("/set-text", authMiddleware, (req, res) => {
   res.json({ success: true, text: currentText });
 });
 
-// ========================================================
-// === 
-// ===               👇👇 新增的 API 路由 👇👇
-// === 
-// ========================================================
-
 // 手動設定「已叫號碼」列表
 app.post("/set-passed-numbers", authMiddleware, (req, res) => {
   const { numbers } = req.body;
-
-  // 1. 驗證
   if (!Array.isArray(numbers)) {
     return res.status(400).json({ error: "Input must be an array." });
   }
-
-  // 2. 過濾與轉換：確保陣列內容是乾淨的數字
   const sanitizedNumbers = numbers
-    .map(n => Number(n)) // 轉成數字
-    .filter(n => !isNaN(n) && n > 0 && Number.isInteger(n)); // 移除無效值 (NaN, 0, 小數)
-
-  // 3. 覆蓋伺服器上的列表
+    .map(n => Number(n))
+    .filter(n => !isNaN(n) && n > 0 && Number.isInteger(n));
   passedNumbers = sanitizedNumbers;
-  
-  // (注意：這裡我們移除了 MAX_PASSED_NUMBERS 的限制，允許管理者手動增加)
-  // (如果您仍想限制，可以取消下面這行的註解)
-  // if (passedNumbers.length > MAX_PASSED_NUMBERS) {
-  //   passedNumbers = passedNumbers.slice(0, MAX_PASSED_NUMBERS);
-  // }
-
-  // 4. 廣播給所有人 (包括前台和所有後台)
   io.emit("updatePassed", passedNumbers);
   res.json({ success: true, numbers: passedNumbers });
 });
 
-// ========================================================
-
-// 重置全部 (這個路由不動，它本來就會清空 passedNumbers)
+// 重置全部
 app.post("/reset", authMiddleware, (req, res) => {
   currentNumber = 0;
   currentText = "";
-  passedNumbers = []; // <-- 保持清空
-  
+  passedNumbers = []; 
   io.emit("update", currentNumber);
   io.emit("updateText", currentText);
-  io.emit("updatePassed", passedNumbers); // <-- 保持廣播
+  io.emit("updatePassed", passedNumbers);
   res.json({ success: true, message: "已重置所有內容" });
 });
 
@@ -126,7 +119,7 @@ app.post("/reset", authMiddleware, (req, res) => {
 io.on("connection", (socket) => {
   socket.emit("update", currentNumber);
   socket.emit("updateText", currentText);
-  socket.emit("updatePassed", passedNumbers); // <-- 保持發送
+  socket.emit("updatePassed", passedNumbers); 
 });
 
 // --- 啟動伺服器 ---
