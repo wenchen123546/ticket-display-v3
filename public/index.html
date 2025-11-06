@@ -5,35 +5,64 @@
 <title>候位號碼顯示</title>
 <script src="/socket.io/socket.io.js"></script>
 <style>
+/* ... (您原本的 body, h1, h2, #number, #displayText 樣式不變) ... */
 body {
-font-family: "Microsoft JhengHei", sans-serif;
-text-align: center;
-background: #f0f4f8;
-margin: 0;
-padding-top: 80px;
+  font-family: "Microsoft JhengHei", sans-serif;
+  text-align: center;
+  background: #f0f4f8;
+  margin: 0;
+  padding-top: 80px;
 }
 h1 {
-font-size: 3rem;
-color: #dc2626;
-margin: 0;
+  font-size: 3rem;
+  color: #dc2626;
+  margin: 0;
 }
 h2 {
-font-size: 4rem;
-color: #333;
-margin: 20px 0 0 0;
+  font-size: 4rem;
+  color: #333;
+  margin: 20px 0 0 0;
 }
 #number {
-font-size: 10rem;
-color: #2563eb;
-margin: 30px 0;
+  font-size: 10rem;
+  color: #2563eb;
+  margin: 30px 0;
 }
 #displayText {
-font-size: 3rem;
-color: #333;
-margin-top: 20px;
-min-height: 3.5rem;
-white-space: pre-wrap; /* 允許換行 */
-word-break: break-word; /* 過長文字自動換行 */
+  font-size: 3rem;
+  color: #333;
+  margin-top: 20px;
+  min-height: 3.5rem;
+  white-space: pre-wrap; 
+  word-break: break-word; 
+}
+
+/* --- 以下為新增的樣式 --- */
+#passed-container {
+  margin-top: 40px;
+}
+#passed-container h3 {
+  font-size: 2.5rem;
+  color: #666;
+  margin: 0 0 15px 0;
+}
+#passedList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 15px; /* 號碼之間的間距 */
+}
+#passedList li {
+  font-size: 3.5rem;
+  color: #888;
+  background: #e0e0e0;
+  padding: 10px 25px;
+  border-radius: 10px;
+  min-width: 60px; /* 確保寬度一致 */
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 </style>
 </head>
@@ -43,20 +72,42 @@ word-break: break-word; /* 過長文字自動換行 */
 <h3 id="number">0</h3>
 <h4 id="displayText"></h4>
 
+<div id="passed-container">
+  <h3>已叫號碼 (過號)</h3>
+  <ul id="passedList">
+    </ul>
+</div>
+
 
 <script>
 const socket = io();
 const numberEl = document.getElementById("number");
 const textEl = document.getElementById("displayText");
-
+const passedListEl = document.getElementById("passedList"); // <-- 新增
 
 socket.on("update", (num) => {
-numberEl.textContent = num;
+  // (音效和閃爍的優化可以加在這裡)
+  numberEl.textContent = num;
 });
 
-
 socket.on("updateText", (text) => {
-textEl.textContent = text || "";
+  textEl.textContent = text || "";
+});
+
+// --- 以下為新增的 Socket 監聽 ---
+socket.on("updatePassed", (numbers) => {
+  passedListEl.innerHTML = ""; // 每次收到新列表都先清空
+  
+  if (numbers && numbers.length > 0) {
+    numbers.forEach(num => {
+      const li = document.createElement("li");
+      li.textContent = num;
+      passedListEl.appendChild(li);
+    });
+  } else {
+    // (可選) 列表為空時顯示的內容
+    // passedListEl.innerHTML = "<li>-</li>"; 
+  }
 });
 </script>
 </body>
