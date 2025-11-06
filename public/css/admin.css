@@ -36,9 +36,9 @@ body {
     margin-bottom: 25px;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: center; 
     flex-wrap: wrap;
-    width: 100%; /* 確保控制組佔滿寬度 */
+    width: 100%;
 }
 .control-group.button-row {
     flex-direction: row;
@@ -65,13 +65,11 @@ button {
     width: 90%;
     max-width: 300px;
 }
-/* 按鈕禁用時的樣式 */
 button:disabled {
     background-color: #999;
     cursor: not-allowed;
     opacity: 0.7;
 }
-
 .control-group.button-row button {
     width: auto;
     min-width: 120px;
@@ -94,13 +92,27 @@ textarea {
     padding: 10px;
 }
 
-/* --- 【新增】 列表編輯器 GUI 樣式 --- */
+/* --- 【修改】 列表編輯器 GUI 樣式 --- */
 .list-editor {
     border: 1px solid #ccc;
     border-radius: 8px;
     padding: 15px;
     background: #f9f9f9;
     max-width: 500px;
+    
+    /* 【修復】 讓區塊本身水平置中 */
+    margin-left: auto;
+    margin-right: auto;
+    
+    /* 因為 .control-group (在同一元素上) 
+      設定了 margin-bottom, 我們要保留它 
+    */
+    margin-bottom: 25px; 
+
+    /* 因為 .control-group 設了 width: 100%, 
+      我們要確保 box-sizing 正確，padding 才不會使其破版
+    */
+    box-sizing: border-box; 
 }
 .list-editor ul {
     list-style: none;
@@ -141,16 +153,16 @@ textarea {
 }
 .input-group {
     display: flex;
-    flex-wrap: wrap; /* 允許換行 */
+    flex-wrap: wrap; 
     justify-content: center;
     align-items: center;
     width: 100%;
 }
 .input-group input {
     flex: 1;
-    min-width: 150px; /* 最小寬度 */
+    min-width: 150px;
     margin: 5px;
-    max-width: 100%; /* 修正 max-width */
+    max-width: 100%; 
 }
 .input-group .btn-add {
     font-size: 1.5rem;
