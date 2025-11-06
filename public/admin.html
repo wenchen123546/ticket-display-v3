@@ -6,7 +6,7 @@
     <title>後台管理 - 登入</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        /* (基礎/登入/RWD CSS 保持不變，為求簡潔此處省略) */
+        /* (CSS 保持不變，為求簡潔此處省略) */
         body { font-family: "Microsoft JhengHei", sans-serif; text-align: center; background: #f0f4f8; margin: 0; padding: 20px; padding-top: 30px; }
         #login-container { max-width: 400px; width: 90%; box-sizing: border-box; margin: 50px auto; padding: 30px; background: #ffffff; border-radius: 10px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
         #login-container h1 { font-size: 2.2rem; color: #dc2626; margin-top: 0; margin-bottom: 25px; }
@@ -31,7 +31,7 @@
         #resetAll { background-color: #7f1d1d; margin-top: 20px; }
         @media (max-width: 768px) { body { padding: 20px 10px; } #login-container { margin: 30px auto; padding: 20px; } #admin-panel h1 { font-size: 2.2rem; } #number { font-size: 4rem; } }
 
-        /* 【修改】 按鈕顏色 */
+        /* 按鈕顏色 */
         #prev { background-color: #ef4444; }
         #next { background-color: #10b981; }
         #setNumber { background-color: #2563eb; }
@@ -39,7 +39,7 @@
         #setRightText { background-color: #f59e0b; }
         #savePassedNumbers { background-color: #0891b2; }
         #saveLinks { background-color: #3b82f6; }
-        #saveFeatured { background-color: #8b5cf6; } /* 【新增】 精選內容按鈕顏色 (紫) */
+        #saveFeaturedContents { background-color: #8b5cf6; } /* 【修改】 ID */
 
     </style>
 </head>
@@ -72,11 +72,9 @@
         </div>
 
         <div class="control-group">
-            <label>設定精選內容 (可留白)</label>
-            <input type="text" id="featuredImageUrl" placeholder="圖片網址 (e.g., /promo.jpg)">
-            <input type="text" id="featuredLinkText" placeholder="連結顯示文字 (e.g., 點此報名)">
-            <input type="text" id="featuredLinkUrl" placeholder="連結目標網址 (e.g., https://...)">
-            <button id="saveFeatured" type="button">儲存精選內容</button>
+            <label for="featuredEditorInput">編輯精選內容 (每行一筆)</label>
+            <textarea id="featuredEditorInput" placeholder="格式： 圖片網址,連結文字,https://..."></textarea>
+            <button id="saveFeaturedContents" type="button">儲存精選內容</button>
         </div>
 
         <div class="control-group">
@@ -96,7 +94,7 @@
                 <button id="resetNumber" type="button" class="btn-reset-single">重置號碼 (歸0)</button>
                 <button id="resetLeftText" type="button" class="btn-reset-single">重置左側文字</button>
                 <button id="resetRightText" type="button" class="btn-reset-single">重置右側文字</button>
-                <button id="resetFeatured" type="button" class="btn-reset-single">重置精選內容</button> <button id="resetPassed" type="button" class="btn-reset-single">重置過號列表</button>
+                <button id="resetFeaturedContents" type="button" class="btn-reset-single">重置精選內容</button> <button id="resetPassed" type="button" class="btn-reset-single">重置過號列表</button>
                 <button id="resetLinks" type="button" class="btn-reset-single">重置連結列表</button>
             </div>
             <button id="resetAll" type="button">💥 重置所有 (全部歸0)</button>
@@ -117,10 +115,9 @@
         const rightCustomTextInput = document.getElementById("rightCustomText");
         const linksEditorInput = document.getElementById("linksEditorInput");
 
-        // 【新增】 抓取精選內容輸入框
-        const featuredImageUrlInput = document.getElementById("featuredImageUrl");
-        const featuredLinkTextInput = document.getElementById("featuredLinkText");
-        const featuredLinkUrlInput = document.getElementById("featuredLinkUrl");
+        // 【修改】 抓取精選內容編輯器
+        const featuredEditorInput = document.getElementById("featuredEditorInput");
+        // (移除舊的精選內容輸入框)
 
         // --- 2. 全域變數 ---
         let token = "";
@@ -147,16 +144,16 @@
             if (links && Array.isArray(links)) { const textValue = links.map(link => `${link.title},${link.url}`).join("\n"); linksEditorInput.value = textValue; } else { linksEditorInput.value = ""; }
         });
 
-        // 【新增】 監聽精選內容
-        socket.on("updateFeatured", (content) => {
-            if (content) {
-                featuredImageUrlInput.value = content.imageUrl || '';
-                featuredLinkTextInput.value = content.linkText || '';
-                featuredLinkUrlInput.value = content.linkUrl || '';
+        // 【修改】 監聽精選內容列表
+        socket.on("updateFeaturedContents", (contents) => {
+            if (contents && Array.isArray(contents)) {
+                // 將陣列 [{...}] 轉回文字編輯器的格式
+                const textValue = contents.map(item => 
+                    `${item.imageUrl},${item.linkText},${item.linkUrl}`
+                ).join("\n");
+                featuredEditorInput.value = textValue;
             } else {
-                featuredImageUrlInput.value = '';
-                featuredLinkTextInput.value = '';
-                featuredLinkUrlInput.value = '';
+                featuredEditorInput.value = "";
             }
         });
 
@@ -173,15 +170,31 @@
         async function savePassedNumbers() { const text = passedNumbersInputEl.value; const numbersArray = text.split(",").map((n) => n.trim()).filter((n) => n.length > 0).map((n) => Number(n)); const success = await apiRequest("/set-passed-numbers", { numbers: numbersArray, }); if (success) { alert("過號列表已儲存。"); } }
         async function saveLinks() { const text = linksEditorInput.value; const linksArray = text.split('\n').map(line => { const parts = line.split(','); if (parts.length >= 2) { return { title: parts[0].trim(), url: parts.slice(1).join(',').trim() }; } return null; }).filter(Boolean); const success = await apiRequest("/set-links", { links: linksArray }); if (success) { alert("連結列表已儲存。"); } }
 
-        // 【新增】 儲存精選內容
-        async function saveFeatured() {
-            const content = {
-                imageUrl: featuredImageUrlInput.value,
-                linkText: featuredLinkTextInput.value,
-                linkUrl: featuredLinkUrlInput.value
-            };
+        // 【修改】 儲存精選內容
+        async function saveFeaturedContents() {
+            const text = featuredEditorInput.value;
             
-            const success = await apiRequest("/set-featured-content", content);
+            // 將文字編輯器的內容轉為 [{...}] 陣列
+            const contentsArray = text
+                .split('\n')
+                .map(line => {
+                    const parts = line.split(',');
+                    if (parts.length >= 3) {
+                        return {
+                            imageUrl: parts[0].trim(),
+                            linkText: parts[1].trim(),
+                            linkUrl: parts.slice(2).join(',').trim() // 處理 URL 中可能包含逗號
+                        };
+                    } else if (parts.length === 2) { // 允許只有圖片和文字
+                        return { imageUrl: parts[0].trim(), linkText: parts[1].trim(), linkUrl: '' };
+                    } else if (parts.length === 1 && parts[0].trim() !== '') { // 允許只有圖片
+                        return { imageUrl: parts[0].trim(), linkText: '', linkUrl: '' };
+                    }
+                    return null; // 格式不符
+                })
+                .filter(Boolean); // 過濾掉格式不符的 null
+
+            const success = await apiRequest("/set-featured-contents", { contents: contentsArray });
             if (success) {
                 alert("精選內容已儲存。");
             }
@@ -194,28 +207,24 @@
         async function resetPassed() { if (!confirm("確定要清空「已叫號碼(過號)」列表嗎？")) return; const success = await apiRequest("/set-passed-numbers", { numbers: [] }); if (success) { alert("過號列表已清空。"); } }
         async function resetLinks() { if (!confirm("確定要清空「連結列表」嗎？")) return; const success = await apiRequest("/set-links", { links: [] }); if (success) { alert("連結列表已清空。"); } }
 
-        // 【新增】 重置精選內容
-        async function resetFeatured() {
+        // 【修改】 重置精選內容
+        async function resetFeaturedContents() {
             if (!confirm("確定要清空「精選內容」嗎？")) {
                 return;
             }
-            const success = await apiRequest("/set-featured-content", { imageUrl: '', linkText: '', linkUrl: '' });
+            const success = await apiRequest("/set-featured-contents", { contents: [] });
             if (success) {
                 alert("精選內容已清空。");
             }
         }
         
-        // 【修改】 重置全部
         async function resetAll() {
-            if (!confirm("確定要將所有內容全部重置嗎？")) {
-                return;
-            }
+            if (!confirm("確定要將所有內容全部重置嗎？")) { return; }
             const success = await apiRequest("/reset", {});
             if (success) {
                 document.getElementById("manualNumber").value = "";
                 leftCustomTextInput.value = "";
                 rightCustomTextInput.value = "";
-                // featured... 和 links... 輸入框會由 socket 自動清空
                 alert("已全部重置。");
             }
         }
@@ -229,14 +238,14 @@
         document.getElementById("setRightText").onclick = setRightText;
         document.getElementById("saveLinks").onclick = saveLinks;
 
-        // 【新增】 綁定精選內容按鈕
-        document.getElementById("saveFeatured").onclick = saveFeatured;
+        // 【修改】 綁定精選內容按鈕
+        document.getElementById("saveFeaturedContents").onclick = saveFeaturedContents;
         
         // 【修改】 綁定重置按鈕
         document.getElementById("resetNumber").onclick = resetNumber;
         document.getElementById("resetLeftText").onclick = resetLeftText;
         document.getElementById("resetRightText").onclick = resetRightText;
-        document.getElementById("resetFeatured").onclick = resetFeatured; // 新增
+        document.getElementById("resetFeaturedContents").onclick = resetFeaturedContents; // 修改
         document.getElementById("resetPassed").onclick = resetPassed;
         document.getElementById("resetLinks").onclick = resetLinks;
         document.getElementById("resetAll").onclick = resetAll;
