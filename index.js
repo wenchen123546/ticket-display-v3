@@ -1,130 +1,204 @@
+/*
+ * ==========================================
+ * 伺服器 (index.js)
+ * * 核心：Node.js + Express + Socket.io
+ * 職責：
+ * 1. 處理 API 請求 (驗證權杖、更新狀態)
+ * 2. 透過 Socket.io 即時廣播狀態變更
+ * 3. 透過 db.json 持久化儲存狀態
+ * ==========================================
+ */
+
+// --- 1. 模組載入 ---
 const express = require("express");
+const http = require("http");
+const socketio = require("socket.io");
+const fs = require("fs");
+const path = require("path");
+
 const app = express();
-const http = require("http").createServer(app);
-const io = require("socket.io")(http);
+const server = http.createServer(app);
+const io = socketio(server);
+
+// --- 2. 核心設定 & 安全性 ---
 const PORT = process.env.PORT || 3000;
-
-// --- 安全性優化 ---
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN;
+const DB_PATH = path.join(__dirname, "db.json");
+
 if (!ADMIN_TOKEN) {
-  console.error("❌ 錯誤： ADMIN_TOKEN 環境變數未設定！");
-  console.log("👉 請使用 'ADMIN_TOKEN=your_secret_password node index.js' 啟動");
-  process.exit(1);
+    console.error("❌ 錯誤： ADMIN_TOKEN 環境變數未設定！");
+    console.log("👉 請使用 'ADMIN_TOKEN=your_secret_password node index.js' 啟動");
+    process.exit(1);
 }
-// ---
 
+// --- 3. 狀態持久化 (Persistence) ---
+
+/**
+ * 將目前記憶體中的狀態寫入 db.json 檔案。
+ */
+function saveState() {
+    try {
+        // 【修改】 更新儲存的狀態
+        const state = { currentNumber, leftText, rightText, passedNumbers };
+        fs.writeFileSync(DB_PATH, JSON.stringify(state, null, 2));
+    } catch (err) {
+        console.error("❌ 儲存狀態失敗:", err);
+    }
+}
+
+/**
+ * 在伺服器啟動時，從 db.json 讀取先前儲存的狀態。
+ */
+function loadState() {
+    try {
+        if (fs.existsSync(DB_PATH)) {
+            const data = fs.readFileSync(DB_PATH, "utf-8");
+            const state = JSON.parse(data);
+            
+            // 【修改】 回填狀態
+            currentNumber = state.currentNumber || 0;
+            leftText = state.leftText || "";         // 新增
+            rightText = state.rightText || "";       // 新增
+            passedNumbers = state.passedNumbers || [];
+            console.log("✅ 狀態已從 db.json 載入。");
+            // 移除 'currentText'
+        }
+    } catch (err) {
+        console.error("❌ 載入狀態失敗:", err);
+    }
+}
+
+// --- 4. 伺服器全域狀態 (Global State) ---
 let currentNumber = 0;
-let currentText = "";
-let passedNumbers = []; 
-const MAX_PASSED_NUMBERS = 5; 
+let leftText = ""; // 【修改】 新增
+let rightText = ""; // 【修改】 新增
+let passedNumbers = [];
+const MAX_PASSED_NUMBERS = 5;
 
+// 啟動時立即載入狀態
+loadState();
+
+// --- 5. Express 中介軟體 (Middleware) ---
 app.use(express.static("public"));
 app.use(express.json());
 
-// --- 中介軟體 ---
 const authMiddleware = (req, res, next) => {
-  const { token } = req.body;
-  if (token !== ADMIN_TOKEN) {
-    return res.status(403).json({ error: "密碼錯誤" });
-  }
-  next();
+    const { token } = req.body;
+    if (token !== ADMIN_TOKEN) {
+        return res.status(403).json({ error: "密碼錯誤" });
+    }
+    next();
 };
 
-// --- 輔助函式 ---
+// --- 6. 輔助函式 ---
 function addNumberToPassed(num) {
-  if (num <= 0) return; 
-  if (passedNumbers.includes(num)) return; 
-  passedNumbers.unshift(num);
-  if (passedNumbers.length > MAX_PASSED_NUMBERS) {
-    passedNumbers.pop();
-  }
-  io.emit("updatePassed", passedNumbers);
+    if (num <= 0) return;
+    if (passedNumbers.includes(num)) return;
+    passedNumbers.unshift(num);
+    if (passedNumbers.length > MAX_PASSED_NUMBERS) {
+        passedNumbers.pop();
+    }
+    io.emit("updatePassed", passedNumbers);
 }
 
-// ========================================================
-// === 
-// ===               👇👇 新增的 API 路由 👇👇
-// === 
-// ========================================================
+// --- 7. API 路由 (Routes) ---
 
-// 僅用於登入時檢查 Token
 app.post("/check-token", authMiddleware, (req, res) => {
-  // authMiddleware 已經完成了驗證工作
-  // 如果程式能執行到這裡，代表 token 是有效的
-  res.json({ success: true, message: "Token is valid" });
+    res.json({ success: true, message: "Token is valid" });
 });
 
-// ========================================================
-
-
-// --- API 路由 ---
-
-// 下一號 / 上一號
 app.post("/change-number", authMiddleware, (req, res) => {
-  // (此處及以下所有路由的程式碼... 保持不變)
-  const { direction } = req.body;
-  if (direction === "next") {
-    addNumberToPassed(currentNumber);
-    currentNumber++;
-  } else if (direction === "prev" && currentNumber > 0) {
-    currentNumber--;
-  }
-  io.emit("update", currentNumber);
-  res.json({ success: true, number: currentNumber });
+    const { direction } = req.body;
+    if (direction === "next") {
+        addNumberToPassed(currentNumber);
+        currentNumber++;
+    } else if (direction === "prev" && currentNumber > 0) {
+        currentNumber--;
+    }
+    io.emit("update", currentNumber);
+    saveState();
+    res.json({ success: true, number: currentNumber });
 });
 
-// 設定號碼
 app.post("/set-number", authMiddleware, (req, res) => {
-  const { number } = req.body;
-  addNumberToPassed(currentNumber);
-  currentNumber = Number(number);
-  io.emit("update", currentNumber);
-  res.json({ success: true, number: currentNumber });
+    const { number } = req.body;
+    addNumberToPassed(currentNumber);
+    currentNumber = Number(number);
+    io.emit("update", currentNumber);
+    saveState();
+    res.json({ success: true, number: currentNumber });
 });
 
-// 設定提示文字
-app.post("/set-text", authMiddleware, (req, res) => {
-  const { text } = req.body;
-  currentText = text;
-  io.emit("updateText", currentText);
-  res.json({ success: true, text: currentText });
+// 【修改】 移除 /set-text API
+
+// 【新增】 設定「左側」文字 API
+app.post("/set-left-text", authMiddleware, (req, res) => {
+    const { text } = req.body;
+    leftText = text;
+    io.emit("updateLeftText", leftText); // 廣播新事件
+    saveState();
+    res.json({ success: true, text: leftText });
 });
 
-// 手動設定「已叫號碼」列表
+// 【新增】 設定「右側」文字 API
+app.post("/set-right-text", authMiddleware, (req, res) => {
+    const { text } = req.body;
+    rightText = text;
+    io.emit("updateRightText", rightText); // 廣播新事件
+    saveState();
+    res.json({ success: true, text: rightText });
+});
+
+
 app.post("/set-passed-numbers", authMiddleware, (req, res) => {
-  const { numbers } = req.body;
-  if (!Array.isArray(numbers)) {
-    return res.status(400).json({ error: "Input must be an array." });
-  }
-  const sanitizedNumbers = numbers
-    .map(n => Number(n))
-    .filter(n => !isNaN(n) && n > 0 && Number.isInteger(n));
-  passedNumbers = sanitizedNumbers;
-  io.emit("updatePassed", passedNumbers);
-  res.json({ success: true, numbers: passedNumbers });
+    const { numbers } = req.body;
+    if (!Array.isArray(numbers)) {
+        return res.status(400).json({ error: "Input must be an array." });
+    }
+    const sanitizedNumbers = numbers
+        .map(n => Number(n))
+        .filter(n => !isNaN(n) && n > 0 && Number.isInteger(n));
+    passedNumbers = sanitizedNumbers;
+    io.emit("updatePassed", passedNumbers);
+    saveState();
+    res.json({ success: true, numbers: passedNumbers });
 });
 
-// 重置全部
+/*
+ * POST /reset
+ * (受 authMiddleware 保護)
+ * * 將所有狀態重置為初始值。
+ */
 app.post("/reset", authMiddleware, (req, res) => {
-  currentNumber = 0;
-  currentText = "";
-  passedNumbers = []; 
-  io.emit("update", currentNumber);
-  io.emit("updateText", currentText);
-  io.emit("updatePassed", passedNumbers);
-  res.json({ success: true, message: "已重置所有內容" });
+    currentNumber = 0;
+    leftText = ""; // 【修改】
+    rightText = ""; // 【修改】
+    passedNumbers = [];
+    
+    // 廣播所有更新
+    io.emit("update", currentNumber);
+    io.emit("updateLeftText", leftText); // 【修改】
+    io.emit("updateRightText", rightText); // 【修改】
+    io.emit("updatePassed", passedNumbers);
+    
+    saveState();
+    res.json({ success: true, message: "已重置所有內容" });
 });
 
-// --- Socket.io 初始化 ---
+// --- 8. Socket.io 連線處理 ---
+
 io.on("connection", (socket) => {
-  socket.emit("update", currentNumber);
-  socket.emit("updateText", currentText);
-  socket.emit("updatePassed", passedNumbers); 
+    // 【修改】 傳送所有狀態
+    socket.emit("update", currentNumber);
+    socket.emit("updateLeftText", leftText);   // 新增
+    socket.emit("updateRightText", rightText); // 新增
+    socket.emit("updatePassed", passedNumbers);
+    // 移除 updateText
 });
 
-// --- 啟動伺服器 ---
-http.listen(PORT, () => {
-  console.log(`✅ Server running on http://localhost:${PORT}`);
-  console.log(`🎟 User page: http://localhost:${PORT}/index.html`);
-  console.log(`🛠 Admin page: http://localhost:${PORT}/admin.html`);
+// --- 9. 啟動伺服器 ---
+server.listen(PORT, () => {
+    console.log(`✅ Server running on http://localhost:${PORT}`);
+    console.log(`🎟 User page: http://localhost:${PORT}/index.html`);
+    console.log(`🛠 Admin page: http://localhost:${PORT}/admin.html`);
 });
