@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>候位號碼顯示</title>
+
     <script src="/socket.io/socket.io.js"></script>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -16,6 +17,8 @@
     <audio id="notify-sound" src="/ding.mp3" preload="auto"></audio>
 
     <h1>💉熱血不宜攔！🩸</h1>
+    <p id="last-updated">正在連線...</p>
+
     <h2>目前號碼</h2>
     
     <h3 id="number">0</h3>
@@ -23,11 +26,11 @@
     <div id="passed-container">
         <h3>已過號</h3>
         <ul id="passedList">
-            </ul>
+        </ul>
     </div>
 
     <div id="featured-container" style="display: none;">
-        </div>
+    </div>
 
     <div id="qr-code-container">
         <div id="qr-code-placeholder"></div>
