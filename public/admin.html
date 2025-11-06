@@ -30,8 +30,6 @@
         .btn-reset-single:hover { opacity: 0.9; }
         #resetAll { background-color: #7f1d1d; margin-top: 20px; }
         @media (max-width: 768px) { body { padding: 20px 10px; } #login-container { margin: 30px auto; padding: 20px; } #admin-panel h1 { font-size: 2.2rem; } #number { font-size: 4rem; } }
-
-        /* 按鈕顏色 */
         #prev { background-color: #ef4444; }
         #next { background-color: #10b981; }
         #setNumber { background-color: #2563eb; }
@@ -39,7 +37,6 @@
         #setRightText { background-color: #f59e0b; }
         #savePassedNumbers { background-color: #0891b2; }
         #saveFeaturedContents { background-color: #8b5cf6; } 
-
     </style>
 </head>
 <body>
@@ -57,22 +54,19 @@
             <button id="prev" type="button">上一號</button>
             <button id="next" type="button">下一號</button>
         </div>
-
         <div class="control-group">
             <input type="number" id="manualNumber" placeholder="輸入號碼" />
             <button id="setNumber" type="button">設定號碼</button>
         </div>
-
         <div class="control-group">
             <textarea id="leftCustomText" placeholder="輸入左側文字，可換行"></textarea>
             <button id="setLeftText" type="button">設定左側文字</button>
         </div>
-
         <div class="control-group">
             <textarea id="rightCustomText" placeholder="輸入右側文字，可換行"></textarea>
             <button id="setRightText" type="button">設定右側文字</button>
         </div>
-
+        
         <div class="control-group">
             <label for="featuredEditorInput">編輯精選連結 (每行一筆)</label>
             <textarea id="featuredEditorInput" placeholder="格式： 連結文字,https://..."></textarea>
@@ -105,12 +99,10 @@
         const passwordInput = document.getElementById("password-input");
         const loginButton = document.getElementById("login-button");
         const loginError = document.getElementById("login-error");
-        
         const numberEl = document.getElementById("number");
         const passedNumbersInputEl = document.getElementById("passedNumbersInput");
         const leftCustomTextInput = document.getElementById("leftCustomText");
         const rightCustomTextInput = document.getElementById("rightCustomText");
-
         const featuredEditorInput = document.getElementById("featuredEditorInput");
 
         // --- 2. 全域變數 ---
@@ -135,7 +127,7 @@
             if (numbers && Array.isArray(numbers)) { passedNumbersInputEl.value = numbers.join(", "); } else { passedNumbersInputEl.value = ""; }
         });
 
-        // 【修改】 監聽精選內容列表
+        // 【修改】 監聽精選內容列表 (移除 imageUrl)
         socket.on("updateFeaturedContents", (contents) => {
             if (contents && Array.isArray(contents)) {
                 // 將陣列 [{...}] 轉回文字編輯器的格式
@@ -158,24 +150,21 @@
         async function setRightText() { const text = rightCustomTextInput.value; const success = await apiRequest("/set-right-text", { text }); if (success) { rightCustomTextInput.value = ""; } }
         async function savePassedNumbers() { const text = passedNumbersInputEl.value; const numbersArray = text.split(",").map((n) => n.trim()).filter((n) => n.length > 0).map((n) => Number(n)); const success = await apiRequest("/set-passed-numbers", { numbers: numbersArray, }); if (success) { alert("過號列表已儲存。"); } }
 
-        // 【修改】 儲存精選內容
+        // 【修改】 儲存精選內容 (移除 imageUrl)
         async function saveFeaturedContents() {
             const text = featuredEditorInput.value;
-            
-            // 將文字編輯器的內容轉為 [{...}] 陣列
             const contentsArray = text
                 .split('\n')
                 .map(line => {
+                    if (line.trim() === '') return null; // 忽略空行
+                    
                     const parts = line.split(',');
-                    if (parts.length >= 2) {
-                        return {
-                            linkText: parts[0].trim(),
-                            linkUrl: parts.slice(1).join(',').trim() // 處理 URL 中可能包含逗號
-                        };
-                    }
-                    return null; // 格式不符
+                    return {
+                        linkText: parts[0] ? parts[0].trim() : '',
+                        linkUrl: parts[1] ? parts.slice(1).join(',').trim() : '' // 處理 URL 中可能包含逗號
+                    };
                 })
-                .filter(item => item && item.linkText && item.linkUrl); // 過濾掉格式不符或不完整的
+                .filter(Boolean); // 過濾掉空行 (null)
 
             const success = await apiRequest("/set-featured-contents", { contents: contentsArray });
             if (success) {
@@ -188,7 +177,6 @@
         async function resetRightText() { if (!confirm("確定要清空「右側文字」嗎？")) return; const success = await apiRequest("/set-right-text", { text: "" }); if (success) { rightCustomTextInput.value = ""; alert("右側文字已清空。"); } }
         async function resetNumber() { if (!confirm("確定要將「目前號碼」重置為 0 嗎？ (會將現有號碼加入過號列表)")) return; const success = await apiRequest("/set-number", { number: 0 }); if (success) { document.getElementById("manualNumber").value = ""; alert("號碼已重置為 0。"); } }
         async function resetPassed() { if (!confirm("確定要清空「已叫號碼(過號)」列表嗎？")) return; const success = await apiRequest("/set-passed-numbers", { numbers: [] }); if (success) { alert("過號列表已清空。"); } }
-        
         async function resetFeaturedContents() {
             if (!confirm("確定要清空「精選連結」嗎？")) {
                 return;
@@ -198,7 +186,6 @@
                 alert("精選連結已清空。");
             }
         }
-        
         async function resetAll() {
             if (!confirm("確定要將所有內容全部重置嗎？")) { return; }
             const success = await apiRequest("/reset", {});
@@ -218,7 +205,6 @@
         document.getElementById("setLeftText").onclick = setLeftText;
         document.getElementById("setRightText").onclick = setRightText;
         document.getElementById("saveFeaturedContents").onclick = saveFeaturedContents;
-        
         document.getElementById("resetNumber").onclick = resetNumber;
         document.getElementById("resetLeftText").onclick = resetLeftText;
         document.getElementById("resetRightText").onclick = resetRightText;
