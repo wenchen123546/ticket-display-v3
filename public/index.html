@@ -1,125 +1,137 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>候位號碼顯示</title>
-<script src="/socket.io/socket.io.js"></script>
-<style>
-/* ============================================= */
-/* ===         👇👇 RWD CSS 👇👇            === */
-/* ============================================= */
-html, body {
-  height: 100%; /* 讓頁面能佔滿全螢幕 */
-  margin: 0;
-  padding: 0;
-}
-body {
-  font-family: "Microsoft JhengHei", sans-serif;
-  text-align: center;
-  background: #f0f4f8;
-  /* 使用 Flexbox 讓內容垂直置中 */
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  padding: 20px;
-  box-sizing: border-box; /* 確保 padding 不會影響 100% 高度 */
-}
-h1 {
-  /* clamp(最小, 偏好, 最大) */
-  font-size: clamp(2rem, 6vw, 3rem);
-  color: #dc2626;
-  margin: 0;
-}
-h2 {
-  font-size: clamp(2.5rem, 8vw, 4rem);
-  color: #333;
-  margin: 20px 0 0 0;
-}
-#number {
-  font-size: clamp(8rem, 30vw, 12rem); /* 讓號碼超大 */
-  color: #2563eb;
-  margin: 20px 0;
-  font-weight: bold;
-}
-#displayText {
-  font-size: clamp(2rem, 6vw, 3rem);
-  color: #333;
-  margin-top: 15px;
-  min-height: 1.2em; /* 用 em 確保高度與字體相關 */
-  white-space: pre-wrap; 
-  word-break: break-word; 
-  width: 90%; /* 避免文字在手機上太寬 */
-}
-#passed-container {
-  margin-top: 30px;
-  width: 100%;
-}
-#passed-container h3 {
-  font-size: clamp(1.8rem, 5vw, 2.5rem);
-  color: #666;
-  margin: 0 0 15px 0;
-}
-#passedList {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px; /* 號碼之間的間距 */
-}
-#passedList li {
-  font-size: clamp(2.5rem, 7vw, 3.5rem);
-  color: #888;
-  background: #e0e0e0;
-  padding: 5px 20px;
-  border-radius: 10px;
-  min-width: 40px; 
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-</style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>候位號碼顯示</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        /*
+============================================= */
+        /* ===          👇👇 RWD CSS 👇👇           === */
+        /*
+============================================= */
+
+        html,
+        body {
+            height: 100%; /* 讓頁面能佔滿全螢幕 */
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: "Microsoft JhengHei", sans-serif;
+            text-align: center;
+            background: #f0f4f8;
+            /* 使用 Flexbox 讓內容垂直置中 */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box; /* 確保 padding 不會影響 100% 高度 */
+        }
+
+        h1 {
+            /* clamp(最小, 偏好, 最大) */
+            font-size: clamp(2rem, 6vw, 3rem);
+            color: #dc2626;
+            margin: 0;
+        }
+
+        h2 {
+            font-size: clamp(2.5rem, 8vw, 4rem);
+            color: #333;
+            margin: 20px 0 0 0;
+        }
+
+        #number {
+            font-size: clamp(8rem, 30vw, 12rem); /* 讓號碼超大 */
+            color: #2563eb;
+            margin: 15px 0; /* 【已修改】 上下邊距改為 15px (原為 20px) */
+            font-weight: bold;
+        }
+
+        #displayText {
+            font-size: clamp(2rem, 6vw, 3rem);
+            color: #333;
+            margin-top: 0; /* 【已修改】 移除上邊距 (原為 15px) */
+            min-height: 1.2em; /* 用 em 確保高度與字體相關 */
+            white-space: pre-wrap;
+            word-break: break-word;
+            width: 90%; /* 避免文字在手機上太寬 */
+        }
+
+        #passed-container {
+            margin-top: 25px; /* 【已修改】 上邊距改為 25px (原為 30px) */
+            width: 100%;
+        }
+
+        #passed-container h3 {
+            font-size: clamp(1.8rem, 5vw, 2.5rem);
+            color: #666;
+            margin: 0 0 15px 0;
+        }
+
+        #passedList {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px; /* 號碼之間的間距 */
+        }
+
+        #passedList li {
+            font-size: clamp(2.5rem, 7vw, 3.5rem);
+            color: #888;
+            background: #e0e0e0;
+            padding: 5px 20px;
+            border-radius: 10px;
+            min-width: 40px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+    </style>
 </head>
 <body>
-<h1>💉熱血不宜攔！🩸</h1>
-<h2>目前號碼：</h2>
-<h3 id="number">0</h3>
-<h4 id="displayText"></h4>
+    <h1>💉熱血不宜攔！🩸</h1>
+    <h2>目前號碼：</h2>
+    <h3 id="number">0</h3>
+    <h4 id="displayText"></h4>
 
-<div id="passed-container">
-  <h3>已叫號碼 (過號)</h3>
-  <ul id="passedList">
-    </ul>
-</div>
+    <div id="passed-container">
+        <h3>已叫號碼 (過號)</h3>
+        <ul id="passedList">
+        </ul>
+    </div>
 
+    <script>
+        // --- JavaScript (不需變動) ---
+        const socket = io();
+        const numberEl = document.getElementById("number");
+        const textEl = document.getElementById("displayText");
+        const passedListEl = document.getElementById("passedList");
 
-<script>
-// --- JavaScript (不需變動) ---
-const socket = io();
-const numberEl = document.getElementById("number");
-const textEl = document.getElementById("displayText");
-const passedListEl = document.getElementById("passedList"); 
+        socket.on("update", (num) => {
+            numberEl.textContent = num;
+        });
 
-socket.on("update", (num) => {
-  numberEl.textContent = num;
-});
+        socket.on("updateText", (text) => {
+            textEl.textContent = text || "";
+        });
 
-socket.on("updateText", (text) => {
-  textEl.textContent = text || "";
-});
+        socket.on("updatePassed", (numbers) => {
+            passedListEl.innerHTML = "";
 
-socket.on("updatePassed", (numbers) => {
-  passedListEl.innerHTML = ""; 
-  
-  if (numbers && numbers.length > 0) {
-    numbers.forEach(num => {
-      const li = document.createElement("li");
-      li.textContent = num;
-      passedListEl.appendChild(li);
-    });
-  }
-});
-</script>
+            if (numbers && numbers.length > 0) {
+                numbers.forEach((num) => {
+                    const li = document.createElement("li");
+                    li.textContent = num;
+                    passedListEl.appendChild(li);
+                });
+            }
+        });
+    </script>
 </body>
 </html>
