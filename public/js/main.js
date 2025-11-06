@@ -12,12 +12,12 @@ const notifySound = document.getElementById("notify-sound"); // 音效
 
 socket.on("connect", () => {
     console.log("Socket.io 已連接");
-    statusBar.classList.remove("visible"); // 隱藏狀態條
+    statusBar.classList.remove("visible"); 
 });
 
 socket.on("disconnect", () => {
     console.log("Socket.io 已斷線");
-    statusBar.classList.add("visible"); // 顯示狀態條
+    statusBar.classList.add("visible"); 
 });
 
 // --- 4. Socket.io 資料更新監聽 ---
@@ -28,13 +28,19 @@ socket.on("update", (num) => {
     if (numberEl.textContent !== String(num)) {
         numberEl.textContent = num;
         
-        // 播放音效 (如果有的話)
+        // 【新增】 播放音效
         if (notifySound) {
             notifySound.play().catch(e => console.warn("音效播放失敗 (需使用者互動):", e));
         }
 
-        // 更新瀏覽器標籤
+        // 【新增】 更新瀏覽器標籤
         document.title = `目前號碼 ${num} - 候位顯示`;
+
+        // 【新增】 觸發 CSS 閃爍動畫
+        numberEl.classList.add("updated");
+        setTimeout(() => {
+            numberEl.classList.remove("updated");
+        }, 500); // 必須與 CSS 動畫時間 (0.5s) 一致
     }
 });
 
@@ -44,7 +50,6 @@ socket.on("updatePassed", (numbers) => {
     const h3 = document.querySelector("#passed-container h3");
 
     if (numbers && numbers.length > 0) {
-        // 動態在 "已過號" 標題上方加入 25px 間距
         h3.style.marginTop = "25px";
         
         numbers.forEach((num) => {
@@ -53,7 +58,6 @@ socket.on("updatePassed", (numbers) => {
             passedListEl.appendChild(li);
         });
     } else {
-        // 移除間距，保持緊湊
         h3.style.marginTop = "0";
     }
 });
@@ -66,7 +70,6 @@ socket.on("updateFeaturedContents", (contents) => {
         let hasVisibleLinks = false; 
 
         contents.forEach(item => {
-            // 只顯示同時有 linkText 和 linkUrl 的項目
             if (item && item.linkText && item.linkUrl) {
                 const a = document.createElement("a");
                 a.className = "featured-link";
@@ -88,3 +91,29 @@ socket.on("updateFeaturedContents", (contents) => {
         featuredContainerEl.style.display = "none";
     }
 });
+
+
+/*
+ * =============================================
+ * 【新增】 5. 動態 QR Code 產生器
+ * (這會在頁面載入完成後自動執行)
+ * =============================================
+ */
+try {
+    const qrPlaceholder = document.getElementById("qr-code-placeholder");
+    if (qrPlaceholder) {
+        // 使用 qrcode.min.js 函式庫
+        new QRCode(qrPlaceholder, {
+            text: window.location.href, // 自動抓取目前頁面的網址
+            width: 120, // 尺寸會被 CSS 覆蓋，但先設定
+            height: 120,
+            correctLevel: QRCode.CorrectLevel.M // 錯誤容忍度
+        });
+    }
+} catch (e) {
+    console.error("QR Code 產生失敗 (qrocde.min.js 函式庫是否載入?)", e);
+    const qrPlaceholder = document.getElementById("qr-code-placeholder");
+    if (qrPlaceholder) {
+        qrPlaceholder.textContent = "QR Code 載入失敗";
+    }
+}
