@@ -28,22 +28,24 @@
         #passedList { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
         #passedList li { font-size: clamp(2.5rem, 7vw, 3.5rem); color: #888; background: #e0e0e0; padding: 5px 20px; border-radius: 10px; min-width: 40px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
 
-        /* 【新增】 精選內容區塊 樣式 */
+        /* 精選內容區塊 樣式 */
         #featured-container {
             margin-top: 25px;
             width: 100%;
         }
         #featuredImage {
-            max-width: 90%; /* 響應式圖片 */
-            width: 400px; /* 最大寬度 */
+            max-width: 90%; 
+            width: 400px; 
             height: auto;
             border-radius: 8px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            /* 【修改】 預設隱藏，由 JS 控制顯示 */
+            display: none; 
         }
         #featuredLink {
-            display: block; /* 顯示為區塊 */
+            display: none; /* 【修改】 預設隱藏，由 JS 控制顯示 */
             font-size: clamp(1.4rem, 4vw, 2rem);
-            color: #8b5cf6; /* 紫色 */
+            color: #8b5cf6;
             font-weight: bold;
             text-decoration: none;
             margin-top: 10px;
@@ -85,8 +87,7 @@
         <a id="featuredLink" href="" target="_blank"></a>
     </div>
 
-    <div id="links-container">
-        <h4>相關連結</h4>
+    <div id="links-container" style="display: none;"> <h4>相關連結</h4>
         <ul id="linksList">
             </ul>
     </div>
@@ -101,8 +102,6 @@
         const passedListEl = document.getElementById("passedList");
         const linksListEl = document.getElementById("linksList");
         const linksContainerEl = document.getElementById("links-container");
-
-        // 【新增】 抓取精選內容元素
         const featuredContainerEl = document.getElementById("featured-container");
         const featuredImageEl = document.getElementById("featuredImage");
         const featuredLinkEl = document.getElementById("featuredLink");
@@ -140,16 +139,39 @@
             }
         });
 
-        // 【新增】 監聽精選內容
+        /*
+         * =============================================
+         * 【修復】 精選內容的顯示邏輯
+         * =============================================
+         */
         socket.on("updateFeatured", (content) => {
-            // 檢查是否所有資料都存在
-            if (content && content.imageUrl && content.linkText && content.linkUrl) {
+            let hasImage = false;
+            let hasLink = false;
+
+            // 1. 檢查圖片
+            if (content && content.imageUrl) {
                 featuredImageEl.src = content.imageUrl;
+                featuredImageEl.style.display = "block"; // 顯示圖片
+                hasImage = true;
+            } else {
+                featuredImageEl.style.display = "none"; // 隱藏圖片
+            }
+
+            // 2. 檢查連結
+            if (content && content.linkText && content.linkUrl) {
                 featuredLinkEl.href = content.linkUrl;
                 featuredLinkEl.textContent = content.linkText;
-                featuredContainerEl.style.display = "block"; // 顯示區塊
+                featuredLinkEl.style.display = "block"; // 顯示連結
+                hasLink = true;
             } else {
-                // 資料不完整或被重置，隱藏區塊
+                featuredLinkEl.style.display = "none"; // 隱藏連結
+            }
+
+            // 3. 決定是否顯示整個區塊
+            // (只要有圖片 或 有連結，就顯示)
+            if (hasImage || hasLink) {
+                featuredContainerEl.style.display = "block";
+            } else {
                 featuredContainerEl.style.display = "none";
             }
         });
