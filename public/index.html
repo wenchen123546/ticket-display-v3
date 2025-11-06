@@ -6,118 +6,69 @@
     <title>候位號碼顯示</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        /*
-============================================= */
-        /* ===          👇👇 RWD CSS 👇👇           === */
-        /*
-============================================= */
+        /* (h1, h2, body, etc. 樣式保持不變) */
+        html, body { height: 100%; margin: 0; padding: 0; }
+        body { font-family: "Microsoft JhengHei", sans-serif; text-align: center; background: #f0f4f8; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
+        h1 { font-size: clamp(2rem, 6vw, 3rem); color: #dc2626; margin: 0; }
+        h2 { font-size: clamp(2.5rem, 8vw, 4rem); color: #333; margin: 20px 0 0 0; }
 
-        html,
-        body {
-            height: 100%;
-            margin: 0;
-            padding: 0;
-        }
+        /* (主顯示區 & 左右文字 樣式保持不變) */
+        #main-display-area { display: flex; flex-direction: row; justify-content: center; align-items: center; width: 100%; margin-top: 15px; }
+        .side-text { flex: 1; font-size: clamp(1.5rem, 4vw, 2.5rem); color: #333; padding: 0 20px; white-space: pre-wrap; word-break: break-word; min-height: 1.2em; }
+        .side-text:empty { min-height: 0; }
+        #leftText { text-align: right; }
+        #rightText { text-align: left; }
 
-        body {
-            font-family: "Microsoft JhengHei", sans-serif;
-            text-align: center;
-            background: #f0f4f8;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-            box-sizing: border-box;
-        }
+        /* (號碼 樣式保持不變) */
+        #number { font-size: clamp(8rem, 30vw, 12rem); color: #2563eb; margin: 0 clamp(15px, 4vw, 40px); font-weight: bold; flex-shrink: 0; }
 
-        h1 {
-            font-size: clamp(2rem, 6vw, 3rem);
-            color: #dc2626;
-            margin: 0;
-        }
+        /* (過號列表 樣式保持不變) */
+        #passed-container { margin-top: 10px; width: 100%; }
+        #passed-container h3 { font-size: clamp(1.8rem, 5vw, 2.5rem); color: #666; margin: 0 0 15px 0; }
+        #passedList { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+        #passedList li { font-size: clamp(2.5rem, 7vw, 3.5rem); color: #888; background: #e0e0e0; padding: 5px 20px; border-radius: 10px; min-width: 40px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
 
-        h2 {
-            font-size: clamp(2.5rem, 8vw, 4rem);
-            color: #333;
-            margin: 20px 0 0 0;
-        }
-
-        /* 【新增】 主顯示區域 Flex 容器 */
-        #main-display-area {
-            display: flex;
-            flex-direction: row;
-            justify-content: center;
-            align-items: center; /* 垂直置中 */
-            width: 100%;
-            margin-top: 15px; /* 與上方 H2 的間距 */
-        }
-
-        /* 【新增】 左右側文字樣式 */
-        .side-text {
-            flex: 1; /* 關鍵：佔用所有可用空間 */
-            font-size: clamp(1.5rem, 4vw, 2.5rem);
-            color: #333;
-            padding: 0 20px;
-            white-space: pre-wrap;
-            word-break: break-word;
-            /* 讓空元素不佔高度 */
-            min-height: 1.2em;
-        }
-        .side-text:empty {
-            min-height: 0;
-        }
-
-        #leftText {
-            text-align: right; /* 文字靠右 (朝向號碼) */
-        }
-
-        #rightText {
-            text-align: left; /* 文字靠左 (朝向號碼) */
-        }
-
-        /* 【修改】 號碼樣式 */
-        #number {
-            font-size: clamp(8rem, 30vw, 12rem);
-            color: #2563eb;
-            /* 關鍵：設定左右間距，避免文字貼著號碼 */
-            margin: 0 clamp(15px, 4vw, 40px);
-            font-weight: bold;
-            flex-shrink: 0; /* 確保號碼本身不被壓縮 */
-        }
-
-        /* 【修改】 移除 #displayText 樣式 */
-        /* 【修改】 調整過號容器的上邊距 */
-        #passed-container {
-            margin-top: 10px; /* 緊貼主顯示區 */
+        /* 【新增】 相關連結區塊 樣式 */
+        #links-container {
+            margin-top: 25px;
             width: 100%;
         }
-
-        #passed-container h3 {
-            font-size: clamp(1.8rem, 5vw, 2.5rem);
-            color: #666;
-            margin: 0 0 15px 0;
+        #links-container h4 {
+            font-size: clamp(1.5rem, 4vw, 2.2rem);
+            color: #333;
+            margin: 0 0 10px 0;
+            border-top: 1px solid #ccc;
+            padding-top: 15px;
         }
-
-        #passedList {
+        #linksList {
             list-style: none;
             padding: 0;
             margin: 0;
             display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
+            flex-direction: column; /* 垂直排列 */
+            align-items: center;
             gap: 10px;
         }
-
-        #passedList li {
-            font-size: clamp(2.5rem, 7vw, 3.5rem);
-            color: #888;
-            background: #e0e0e0;
-            padding: 5px 20px;
-            border-radius: 10px;
-            min-width: 40px;
+        #linksList li a {
+            font-size: clamp(1.2rem, 3.5vw, 1.8rem);
+            color: #2563eb;
+            text-decoration: none;
+            background: #fff;
+            padding: 8px 15px;
+            border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.2s;
         }
+        #linksList li a:hover {
+            background-color: #f0f4f8;
+            text-decoration: underline;
+        }
+
+        /* (QR Code 樣式 - 如果您有加的話) */
+        #qr-code-container { position: fixed; bottom: 20px; right: 20px; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); z-index: 100; }
+        #qr-code-container img { display: block; width: 120px; height: 120px; }
+        #qr-code-container p { margin: 5px 0 0 0; font-size: 0.8rem; color: #333; }
+        @media (max-width: 768px) { #qr-code-container { width: 80px; height: 80px; padding: 5px; bottom: 10px; right: 10px; } #qr-code-container img { width: 80px; height: 80px; } #qr-code-container p { display: none; } }
     </style>
 </head>
 <body>
@@ -132,36 +83,32 @@
     
     <div id="passed-container">
         <h3>已叫號碼 (過號)</h3>
-        <ul id="passedList">
-        </ul>
+        <ul id="passedList"></ul>
     </div>
+
+    <div id="links-container">
+        <h4>相關連結</h4>
+        <ul id="linksList">
+            </ul>
+    </div>
+
 
     <script>
         const socket = io();
         
-        // 【修改】 抓取新元素
         const numberEl = document.getElementById("number");
         const leftTextEl = document.getElementById("leftText");
         const rightTextEl = document.getElementById("rightText");
         const passedListEl = document.getElementById("passedList");
-        // 【移除】 textEl
-
-        socket.on("update", (num) => {
-            numberEl.textContent = num;
-        });
-
-        // 【新增】 監聽左側文字
-        socket.on("updateLeftText", (text) => {
-            leftTextEl.textContent = text || "";
-        });
-
-        // 【新增】 監聽右側文字
-        socket.on("updateRightText", (text) => {
-            rightTextEl.textContent = text || "";
-        });
         
-        // 【移除】 updateText 監聽器
+        // 【新增】 抓取連結列表
+        const linksListEl = document.getElementById("linksList");
+        const linksContainerEl = document.getElementById("links-container"); // 抓取容器
 
+        socket.on("update", (num) => { numberEl.textContent = num; });
+        socket.on("updateLeftText", (text) => { leftTextEl.textContent = text || ""; });
+        socket.on("updateRightText", (text) => { rightTextEl.textContent = text || ""; });
+        
         socket.on("updatePassed", (numbers) => {
             passedListEl.innerHTML = "";
             if (numbers && numbers.length > 0) {
@@ -172,6 +119,27 @@
                 });
             }
         });
+
+        // 【新增】 監聽連結列表
+        socket.on("updateLinks", (links) => {
+            linksListEl.innerHTML = ""; // 清空舊連結
+            if (links && links.length > 0) {
+                linksContainerEl.style.display = "block"; // 顯示容器
+                links.forEach(link => {
+                    const li = document.createElement("li");
+                    const a = document.createElement("a");
+                    a.href = link.url;
+                    a.textContent = link.title;
+                    a.target = "_blank"; // 確保在新分頁開啟
+                    
+                    li.appendChild(a);
+                    linksListEl.appendChild(li);
+                });
+            } else {
+                linksContainerEl.style.display = "none"; // 如果沒有連結，隱藏整個區塊
+            }
+        });
     </script>
-</body>
+
+    </body>
 </html>
