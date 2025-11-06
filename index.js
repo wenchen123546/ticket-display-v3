@@ -2,7 +2,7 @@
  * ==========================================
  * 伺服器 (index.js)
  * * (無 db.json，純記憶體版本)
- * * (已移除「自動加入過號」功能)
+ * * (已加入安全過濾)
  * ==========================================
  */
 
@@ -30,7 +30,7 @@ console.log("ℹ️ 系統正在以「純記憶體」模式運行。伺服器重
 let currentNumber = 0;
 let passedNumbers = [];
 let featuredContents = []; 
-const MAX_PASSED_NUMBERS = 5; // 限制手動儲存的數量
+const MAX_PASSED_NUMBERS = 5;
 
 // --- 5. Express 中介軟體 (Middleware) ---
 app.use(express.static("public"));
@@ -45,7 +45,15 @@ const authMiddleware = (req, res, next) => {
 };
 
 // --- 6. 輔助函式 ---
-// [REMOVED] addNumberToPassed 函式已被移除
+function addNumberToPassed(num) {
+    if (num <= 0) return;
+    if (passedNumbers.includes(num)) return;
+    passedNumbers.unshift(num);
+    if (passedNumbers.length > MAX_PASSED_NUMBERS) {
+        passedNumbers.pop();
+    }
+    io.emit("updatePassed", passedNumbers);
+}
 
 // --- 7. API 路由 (Routes) ---
 
@@ -53,25 +61,18 @@ app.post("/check-token", authMiddleware, (req, res) => { res.json({ success: tru
 
 app.post("/change-number", authMiddleware, (req, res) => {
     const { direction } = req.body;
-    if (direction === "next") { 
-        // addNumberToPassed(currentNumber); // [REMOVED]
-        currentNumber++; 
-    } 
-    else if (direction === "prev" && currentNumber > 0) { 
-        currentNumber--; 
-    }
-    io.emit("update", currentNumber); 
-    res.json({ success: true, number: currentNumber });
+    if (direction === "next") { addNumberToPassed(currentNumber); currentNumber++; } 
+    else if (direction === "prev" && currentNumber > 0) { currentNumber--; }
+    io.emit("update", currentNumber); res.json({ success: true, number: currentNumber });
 });
 
 app.post("/set-number", authMiddleware, (req, res) => {
     const { number } = req.body;
-    // if (Number(number) !== 0) { // [REMOVED]
-    //     addNumberToPassed(currentNumber); 
-    // }
+    if (Number(number) !== 0) {
+        addNumberToPassed(currentNumber);
+    }
     currentNumber = Number(number);
-    io.emit("update", currentNumber); 
-    res.json({ success: true, number: currentNumber });
+    io.emit("update", currentNumber); res.json({ success: true, number: currentNumber });
 });
 
 app.post("/set-passed-numbers", authMiddleware, (req, res) => {
@@ -82,7 +83,7 @@ app.post("/set-passed-numbers", authMiddleware, (req, res) => {
         .map(n => Number(n))
         .filter(n => !isNaN(n) && n > 0 && Number.isInteger(n));
     
-    // 【保留】 仍然限制手動儲存的數量，防止記憶體濫用
+    // 【修復】 限制手動儲存的數量
     passedNumbers = sanitizedNumbers.slice(0, MAX_PASSED_NUMBERS);
     
     io.emit("updatePassed", passedNumbers); 
@@ -100,7 +101,13 @@ app.post("/set-featured-contents", authMiddleware, (req, res) => {
         .map(item => ({ 
             linkText: item.linkText || '', 
             linkUrl: item.linkUrl || ''
-        }));
+        }))
+        // 【修復】 安全性過濾：只允許 http/https 或空網址
+        .filter(item => {
+            if (item.linkUrl === '') return true; // 允許空網址
+            return item.linkUrl.startsWith('http://') || item.linkUrl.startsWith('https://');
+        });
+
     featuredContents = sanitizedContents;
     io.emit("updateFeaturedContents", featuredContents); 
     res.json({ success: true, contents: featuredContents });
