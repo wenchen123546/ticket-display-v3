@@ -11,7 +11,7 @@ body {
   text-align: center;
   background: #f0f4f8;  /* 前台背景色相同 */
   margin: 0;
-  padding-top: 50px;
+  padding: 50px 20px; /* 增加左右 padding */
 }
 
 /* 標題 */
@@ -28,6 +28,11 @@ h1 {
   margin: 20px 0;
 }
 
+/* 容器 (RWD) */
+.control-group {
+  margin-bottom: 25px;
+}
+
 /* 按鈕樣式 */
 button {
   font-size: 1.2rem;
@@ -37,7 +42,12 @@ button {
   border-radius: 8px;
   cursor: pointer;
   color: white;
+  min-width: 120px; /* 讓按鈕寬度較一致 */
 }
+button:hover {
+  opacity: 0.9;
+}
+
 #prev { background-color: #ef4444; }    /* 紅色上一號 */
 #next { background-color: #10b981; }    /* 綠色下一號 */
 #setNumber { background-color: #2563eb; } /* 藍色設定號碼 */
@@ -47,11 +57,13 @@ button {
 input, textarea {
   font-size: 1.2rem;
   padding: 8px;
-  width: 300px;
+  width: 90%; /* RWD */
+  max-width: 300px; /* 最大寬度 */
   text-align: center;
   border-radius: 6px;
   border: 1px solid #ccc;
   margin-top: 10px;
+  box-sizing: border-box; /* 確保 padding 不會撐爆寬度 */
 }
 textarea {
   resize: vertical;
@@ -59,80 +71,133 @@ textarea {
   white-space: pre-wrap;   /* 允許換行 */
   word-break: break-word;  /* 過長文字自動換行 */
 }
+
+/* 重置區域 */
+.reset-zone {
+  margin-top: 40px; 
+  border-top: 1px solid #ccc; 
+  padding-top: 20px;
+}
+#resetAll {
+  background-color: #7f1d1d; /* 深紅色 */
+}
 </style>
 </head>
 <body>
 
 <h1>目前號碼：<span id="number">0</span></h1>
 
-<!-- 上一號 / 下一號 -->
-<div>
+<div class="control-group">
   <button id="prev">上一號</button>
   <button id="next">下一號</button>
 </div>
 
-<!-- 設定號碼 -->
-<div>
+<div class="control-group">
   <input type="number" id="manualNumber" placeholder="輸入號碼" />
   <button id="setNumber">設定號碼</button>
 </div>
 
-<!-- 設定提示文字 -->
-<div>
+<div class="control-group">
   <textarea id="customText" placeholder="輸入中文文字，可換行"></textarea>
   <button id="setText">設定文字</button>
 </div>
 
+<div class="reset-zone">
+  <button id="resetAll">💥 重置所有 (號碼/文字/過號)</button>
+</div>
+
 <script>
-const socket = io();
-const numberEl = document.getElementById("number");
+  const socket = io();
+  const numberEl = document.getElementById("number");
 
-let token = localStorage.getItem("adminToken") || "";
+  let token = localStorage.getItem("adminToken") || "";
 
-if(!token){
-  token = prompt("請輸入管理密碼（預設 1234）") || "";
-  localStorage.setItem("adminToken", token);
-}
+  if (!token) {
+    // 移除了 "預設 1234" 的提示
+    token = prompt("請輸入管理密碼") || "";
+    localStorage.setItem("adminToken", token);
+  }
 
-// 即時更新號碼
-socket.on("update", num => numberEl.textContent = num);
+  // 即時更新號碼
+  socket.on("update", num => numberEl.textContent = num);
 
-// 改變號碼
-async function changeNumber(direction){
-  await fetch("/change-number",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({token,direction})
-  });
-}
+  // 統一的 API 請求函式 (包含錯誤處理)
+  async function apiRequest(endpoint, body) {
+    try {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // 自動將 token 夾帶在 body 中
+        body: JSON.stringify({ ...body, token })
+      });
 
-// 設定號碼
-async function setNumber(){
-  const num = document.getElementById("manualNumber").value;
-  await fetch("/set-number",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({token,number:num})
-  });
-  document.getElementById("manualNumber").value="";
-}
+      // 檢查回應是否 OK (status 200-299)
+      if (!res.ok) {
+        const errorData = await res.json();
+        
+        // 如果是密碼錯誤 (403 Forbidden)
+        if (res.status === 403) {
+          alert("密碼錯誤！請重新整理頁面並輸入正確密碼。");
+          localStorage.removeItem("adminToken"); // 清除錯誤的 token
+        } else {
+          // 顯示後端傳來的其他錯誤
+          alert("發生錯誤：" + (errorData.error || "未知錯誤"));
+        }
+        return false; // 表示請求失敗
+      }
+      return true; // 表示請求成功
 
-// 設定提示文字
-async function setText(){
-  const text = document.getElementById("customText").value;
-  await fetch("/set-text",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({token,text})
-  });
-  document.getElementById("customText").value="";
-}
+    } catch (err) {
+      alert("網路連線失敗或伺服器無回應：" + err.message);
+      return false; // 表示請求失敗
+    }
+  }
 
-// 綁定按鈕事件
-document.getElementById("next").onclick = () => changeNumber("next");
-document.getElementById("prev").onclick = () => changeNumber("prev");
-document.getElementById("setNumber").onclick = setNumber;
-document.getElementById("setText").onclick = setText;
+  // 改變號碼
+  async function changeNumber(direction) {
+    await apiRequest("/change-number", { direction });
+  }
+
+  // 設定號碼
+  async function setNumber() {
+    const num = document.getElementById("manualNumber").value;
+    if (num === "") return; // 避免送出空值
+    
+    const success = await apiRequest("/set-number", { number: num });
+    if (success) {
+      document.getElementById("manualNumber").value = "";
+    }
+  }
+
+  // 設定提示文字
+  async function setText() {
+    const text = document.getElementById("customText").value;
+    // 允許送出空字串來清除文字
+    const success = await apiRequest("/set-text", { text });
+    if (success) {
+      document.getElementById("customText").value = "";
+    }
+  }
+  
+  // 重置全部
+  async function resetAll() {
+    if (!confirm("確定要將目前號碼、提示文字、已叫號碼列表全部重置嗎？")) {
+      return;
+    }
+    const success = await apiRequest("/reset", {});
+    if (success) {
+      document.getElementById("manualNumber").value = "";
+      document.getElementById("customText").value = "";
+      alert("已全部重置。");
+    }
+  }
+
+  // 綁定按鈕事件
+  document.getElementById("next").onclick = () => changeNumber("next");
+  document.getElementById("prev").onclick = () => changeNumber("prev");
+  document.getElementById("setNumber").onclick = setNumber;
+  document.getElementById("setText").onclick = setText;
+  document.getElementById("resetAll").onclick = resetAll;
 </script>
 
 </body>
