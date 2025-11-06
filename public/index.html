@@ -6,29 +6,114 @@
     <title>候位號碼顯示</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        /* (h1, h2, body, etc. 樣式保持不變) */
-        html, body { height: 100%; margin: 0; padding: 0; }
-        body { font-family: "Microsoft JhengHei", sans-serif; text-align: center; background: #f0f4f8; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
-        h1 { font-size: clamp(2rem, 6vw, 3rem); color: #dc2626; margin: 0; }
-        h2 { font-size: clamp(2.5rem, 8vw, 4rem); color: #333; margin: 20px 0 0 0; }
+        /*
+============================================= */
+        /* ===          👇👇 RWD CSS 👇👇           === */
+        /*
+============================================= */
+
+        /* 【修改】 允許頁面高度自然增長 */
+        html,
+        body {
+            /* 移除 height: 100%; */
+            min-height: 100%; /* 確保背景至少填滿一頁 */
+            margin: 0;
+            padding: 0;
+        }
+
+        /* 【修改】 移除垂直置中，改為從頂部開始排列 */
+        body {
+            font-family: "Microsoft JhengHei", sans-serif;
+            text-align: center;
+            background: #f0f4f8;
+            display: flex;
+            flex-direction: column;
+            /* 移除 justify-content: center; */
+            align-items: center;
+            padding: 20px;
+            padding-top: 30px; /* 讓頂部標題有一點呼吸空間 */
+            box-sizing: border-box;
+        }
+
+        h1 {
+            font-size: clamp(2rem, 6vw, 3rem);
+            color: #dc2626;
+            margin: 0;
+        }
+
+        h2 {
+            font-size: clamp(2.5rem, 8vw, 4rem);
+            color: #333;
+            margin: 20px 0 0 0;
+        }
 
         /* (主顯示區 & 左右文字 樣式保持不變) */
-        #main-display-area { display: flex; flex-direction: row; justify-content: center; align-items: center; width: 100%; margin-top: 15px; }
-        .side-text { flex: 1; font-size: clamp(1.5rem, 4vw, 2.5rem); color: #333; padding: 0 20px; white-space: pre-wrap; word-break: break-word; min-height: 1.2em; }
-        .side-text:empty { min-height: 0; }
-        #leftText { text-align: right; }
-        #rightText { text-align: left; }
+        #main-display-area {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            margin-top: 15px;
+        }
+        .side-text {
+            flex: 1;
+            font-size: clamp(1.5rem, 4vw, 2.5rem);
+            color: #333;
+            padding: 0 20px;
+            white-space: pre-wrap;
+            word-break: break-word;
+            min-height: 1.2em;
+        }
+        .side-text:empty {
+            min-height: 0;
+        }
+        #leftText {
+            text-align: right;
+        }
+        #rightText {
+            text-align: left;
+        }
 
         /* (號碼 樣式保持不變) */
-        #number { font-size: clamp(8rem, 30vw, 12rem); color: #2563eb; margin: 0 clamp(15px, 4vw, 40px); font-weight: bold; flex-shrink: 0; }
+        #number {
+            font-size: clamp(8rem, 30vw, 12rem);
+            color: #2563eb;
+            margin: 0 clamp(15px, 4vw, 40px);
+            font-weight: bold;
+            flex-shrink: 0;
+        }
 
         /* (過號列表 樣式保持不變) */
-        #passed-container { margin-top: 10px; width: 100%; }
-        #passed-container h3 { font-size: clamp(1.8rem, 5vw, 2.5rem); color: #666; margin: 0 0 15px 0; }
-        #passedList { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
-        #passedList li { font-size: clamp(2.5rem, 7vw, 3.5rem); color: #888; background: #e0e0e0; padding: 5px 20px; border-radius: 10px; min-width: 40px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
+        #passed-container {
+            margin-top: 10px;
+            width: 100%;
+        }
+        #passed-container h3 {
+            font-size: clamp(1.8rem, 5vw, 2.5rem);
+            color: #666;
+            margin: 0 0 15px 0;
+        }
+        #passedList {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+        #passedList li {
+            font-size: clamp(2.5rem, 7vw, 3.5rem);
+            color: #888;
+            background: #e0e0e0;
+            padding: 5px 20px;
+            border-radius: 10px;
+            min-width: 40px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
 
-        /* 【修改】 精選連結區塊 樣式 (移除 img 相關) */
+        /* (精選連結區塊 樣式保持不變) */
         #featured-container {
             margin-top: 25px;
             width: 100%;
@@ -55,13 +140,67 @@
         }
 
         /* (QR Code 樣式 - 如果您有加的話) */
-        #qr-code-container { position: fixed; bottom: 20px; right: 20px; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); z-index: 100; }
-        #qr-code-container img { display: block; width: 120px; height: 120px; }
-        #qr-code-container p { margin: 5px 0 0 0; font-size: 0.8rem; color: #333; }
-        @media (max-width: 768px) { #qr-code-container { width: 80px; height: 80px; padding: 5px; bottom: 10px; right: 10px; } #qr-code-container img { width: 80px; height: 80px; } #qr-code-container p { display: none; } }
+        #qr-code-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+            z-index: 100;
+        }
+        #qr-code-container img {
+            display: block;
+            width: 120px;
+            height: 120px;
+        }
+        #qr-code-container p {
+            margin: 5px 0 0 0;
+            font-size: 0.8rem;
+            color: #333;
+        }
+        @media (max-width: 768px) {
+            #qr-code-container {
+                width: 80px;
+                height: 80px;
+                padding: 5px;
+                bottom: 10px;
+                right: 10px;
+            }
+            #qr-code-container img {
+                width: 80px;
+                height: 80px;
+            }
+            #qr-code-container p {
+                display: none;
+            }
+        }
+
+        /* 【新增】 連線狀態提示條 */
+        #status-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background-color: #f44336; /* 紅色 */
+            color: white;
+            padding: 8px;
+            font-weight: bold;
+            text-align: center;
+            z-index: 1000;
+            transform: translateY(-100%); /* 預設隱藏 */
+            transition: transform 0.3s ease;
+        }
+        #status-bar.visible {
+            transform: translateY(0); /* 顯示 */
+        }
+
     </style>
 </head>
 <body>
+    <div id="status-bar">連線中斷，正在嘗試重新連線...</div>
+
     <h1>💉熱血不宜攔！🩸</h1>
     <h2>目前號碼：</h2>
 
@@ -86,8 +225,21 @@
         const leftTextEl = document.getElementById("leftText");
         const rightTextEl = document.getElementById("rightText");
         const passedListEl = document.getElementById("passedList");
-        
         const featuredContainerEl = document.getElementById("featured-container");
+        
+        // 【新增】 抓取狀態條
+        const statusBar = document.getElementById("status-bar");
+
+        // 【新增】 連線/斷線事件
+        socket.on("connect", () => {
+            console.log("Socket.io 已連接");
+            statusBar.classList.remove("visible"); // 隱藏提示條
+        });
+
+        socket.on("disconnect", () => {
+            console.log("Socket.io 已斷線");
+            statusBar.classList.add("visible"); // 顯示提示條
+        });
 
         socket.on("update", (num) => { numberEl.textContent = num; });
         socket.on("updateLeftText", (text) => { leftTextEl.innerHTML = text || ""; });
@@ -104,11 +256,6 @@
             }
         });
 
-        /*
-         * =============================================
-         * 【修改】 精選內容的顯示邏輯 (移除圖片)
-         * =============================================
-         */
         socket.on("updateFeaturedContents", (contents) => {
             featuredContainerEl.innerHTML = "";
             
@@ -139,6 +286,11 @@
             }
         });
     </script>
+
+    <div id="qr-code-container">
+        <img src="/qrcode.png" alt="Scan to view on your phone">
+        <p>掃描查看進度</p>
+    </div>
 
     </body>
 </html>
