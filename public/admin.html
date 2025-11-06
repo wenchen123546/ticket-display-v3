@@ -9,9 +9,9 @@
 body {
   font-family: "Microsoft JhengHei", sans-serif;
   text-align: center;
-  background: #f0f4f8;  /* 前台背景色相同 */
+  background: #f0f4f8; 
   margin: 0;
-  padding: 50px 20px; /* 增加左右 padding */
+  padding: 50px 20px; 
 }
 
 /* 標題 */
@@ -24,13 +24,22 @@ h1 {
 /* 目前號碼顯示 */
 #number {
   font-size: 5rem;
-  color: #2563eb;  /* 前台號碼顏色 */
+  color: #2563eb;
   margin: 20px 0;
 }
 
 /* 容器 (RWD) */
 .control-group {
   margin-bottom: 25px;
+}
+
+/* --- 新增：label 樣式 --- */
+.control-group label {
+  display: block;
+  font-size: 1.1rem;
+  color: #333;
+  margin-bottom: 8px;
+  font-weight: bold;
 }
 
 /* 按鈕樣式 */
@@ -42,34 +51,37 @@ button {
   border-radius: 8px;
   cursor: pointer;
   color: white;
-  min-width: 120px; /* 讓按鈕寬度較一致 */
+  min-width: 120px; 
 }
 button:hover {
   opacity: 0.9;
 }
 
-#prev { background-color: #ef4444; }    /* 紅色上一號 */
-#next { background-color: #10b981; }    /* 綠色下一號 */
-#setNumber { background-color: #2563eb; } /* 藍色設定號碼 */
-#setText { background-color: #f59e0b; }   /* 橙色設定文字 */
+#prev { background-color: #ef4444; } 
+#next { background-color: #10b981; }
+#setNumber { background-color: #2563eb; } 
+#setText { background-color: #f59e0b; }
+#savePassedNumbers { background-color: #0891b2; } /* --- 新增：儲存按鈕顏色 --- */
 
 /* 輸入框與文字框 */
 input, textarea {
   font-size: 1.2rem;
   padding: 8px;
-  width: 90%; /* RWD */
-  max-width: 300px; /* 最大寬度 */
+  width: 90%; 
+  max-width: 300px; 
   text-align: center;
   border-radius: 6px;
   border: 1px solid #ccc;
   margin-top: 10px;
-  box-sizing: border-box; /* 確保 padding 不會撐爆寬度 */
+  box-sizing: border-box; 
 }
 textarea {
   resize: vertical;
   height: 80px;
-  white-space: pre-wrap;   /* 允許換行 */
-  word-break: break-word;  /* 過長文字自動換行 */
+  white-space: pre-wrap;
+  word-break: break-word; 
+  text-align: left; /* --- 修改：讓列表輸入靠左 --- */
+  padding: 10px;    /* --- 修改：增加內距 --- */
 }
 
 /* 重置區域 */
@@ -79,7 +91,7 @@ textarea {
   padding-top: 20px;
 }
 #resetAll {
-  background-color: #7f1d1d; /* 深紅色 */
+  background-color: #7f1d1d; 
 }
 </style>
 </head>
@@ -102,6 +114,13 @@ textarea {
   <button id="setText">設定文字</button>
 </div>
 
+<div class="control-group">
+  <label for="passedNumbersInput">手動編輯過號列表 (用逗號,分隔)</label>
+  <textarea id="passedNumbersInput" placeholder="例如： 5, 8, 12"></textarea>
+  <button id="savePassedNumbers">儲存過號列表</button>
+</div>
+
+
 <div class="reset-zone">
   <button id="resetAll">💥 重置所有 (號碼/文字/過號)</button>
 </div>
@@ -109,49 +128,62 @@ textarea {
 <script>
   const socket = io();
   const numberEl = document.getElementById("number");
+  
+  // --- 新增：取得過號列表的 textarea
+  const passedNumbersInputEl = document.getElementById("passedNumbersInput");
 
   let token = localStorage.getItem("adminToken") || "";
 
   if (!token) {
-    // 移除了 "預設 1234" 的提示
     token = prompt("請輸入管理密碼") || "";
     localStorage.setItem("adminToken", token);
   }
 
-  // 即時更新號碼
-  socket.on("update", num => numberEl.textContent = num);
+  // --- Socket 監聽器 ---
 
-  // 統一的 API 請求函式 (包含錯誤處理)
+  // 監聽目前號碼
+  socket.on("update", num => numberEl.textContent = num);
+  
+  // --- 新增：監聽過號列表 ---
+  // 當列表被更新時 (無論是誰更新的)，都要同步到這個 textarea
+  socket.on("updatePassed", (numbers) => {
+    if (numbers && Array.isArray(numbers)) {
+      // 將 [5, 8, 12] 轉成 "5, 8, 12"
+      passedNumbersInputEl.value = numbers.join(", ");
+    } else {
+      passedNumbersInputEl.value = "";
+    }
+  });
+
+
+  // --- API 請求函式 (不變) ---
   async function apiRequest(endpoint, body) {
     try {
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // 自動將 token 夾帶在 body 中
         body: JSON.stringify({ ...body, token })
       });
 
-      // 檢查回應是否 OK (status 200-299)
       if (!res.ok) {
         const errorData = await res.json();
-        
-        // 如果是密碼錯誤 (403 Forbidden)
         if (res.status === 403) {
           alert("密碼錯誤！請重新整理頁面並輸入正確密碼。");
-          localStorage.removeItem("adminToken"); // 清除錯誤的 token
+          localStorage.removeItem("adminToken");
         } else {
-          // 顯示後端傳來的其他錯誤
           alert("發生錯誤：" + (errorData.error || "未知錯誤"));
         }
-        return false; // 表示請求失敗
+        return false;
       }
-      return true; // 表示請求成功
+      return true;
 
     } catch (err) {
       alert("網路連線失敗或伺服器無回應：" + err.message);
-      return false; // 表示請求失敗
+      return false;
     }
   }
+
+  // --- 按鈕功能 ---
 
   // 改變號碼
   async function changeNumber(direction) {
@@ -161,8 +193,7 @@ textarea {
   // 設定號碼
   async function setNumber() {
     const num = document.getElementById("manualNumber").value;
-    if (num === "") return; // 避免送出空值
-    
+    if (num === "") return;
     const success = await apiRequest("/set-number", { number: num });
     if (success) {
       document.getElementById("manualNumber").value = "";
@@ -172,13 +203,32 @@ textarea {
   // 設定提示文字
   async function setText() {
     const text = document.getElementById("customText").value;
-    // 允許送出空字串來清除文字
     const success = await apiRequest("/set-text", { text });
     if (success) {
       document.getElementById("customText").value = "";
     }
   }
-  
+
+  // --- 新增：儲存過號列表 ---
+  async function savePassedNumbers() {
+    const text = passedNumbersInputEl.value; // 取得 "5, 8, 12"
+    
+    // 將 "5, 8, 12" 或 "5,8,12" 轉成 [5, 8, 12]
+    const numbersArray = text
+      .split(',') // 用逗號切割
+      .map(n => n.trim()) // 移除空白
+      .filter(n => n.length > 0) // 移除空字串 (例如 "5,,8" 會產生空值)
+      .map(n => Number(n)); // 轉成數字
+    
+    // 呼叫我們在 index.js 新增的 API
+    const success = await apiRequest("/set-passed-numbers", { numbers: numbersArray });
+    
+    if (success) {
+      alert("過號列表已儲存。");
+      // (不需要清空，因為 socket.on("updatePassed") 會自動從後端同步最新列表)
+    }
+  }
+
   // 重置全部
   async function resetAll() {
     if (!confirm("確定要將目前號碼、提示文字、已叫號碼列表全部重置嗎？")) {
@@ -188,16 +238,20 @@ textarea {
     if (success) {
       document.getElementById("manualNumber").value = "";
       document.getElementById("customText").value = "";
+      // passedNumbersInputEl 會被 socket.on("updatePassed") 自動清空
       alert("已全部重置。");
     }
   }
 
-  // 綁定按鈕事件
+  // --- 綁定按鈕事件 ---
   document.getElementById("next").onclick = () => changeNumber("next");
   document.getElementById("prev").onclick = () => changeNumber("prev");
   document.getElementById("setNumber").onclick = setNumber;
   document.getElementById("setText").onclick = setText;
   document.getElementById("resetAll").onclick = resetAll;
+  
+  // --- 新增：綁定儲存過號列表按鈕 ---
+  document.getElementById("savePassedNumbers").onclick = savePassedNumbers;
 </script>
 
 </body>
