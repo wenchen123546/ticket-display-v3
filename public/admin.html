@@ -38,8 +38,7 @@
         #setLeftText { background-color: #f59e0b; }
         #setRightText { background-color: #f59e0b; }
         #savePassedNumbers { background-color: #0891b2; }
-        #saveLinks { background-color: #3b82f6; }
-        #saveFeaturedContents { background-color: #8b5cf6; } /* 【修改】 ID */
+        #saveFeaturedContents { background-color: #8b5cf6; } 
 
     </style>
 </head>
@@ -58,34 +57,32 @@
             <button id="prev" type="button">上一號</button>
             <button id="next" type="button">下一號</button>
         </div>
+
         <div class="control-group">
             <input type="number" id="manualNumber" placeholder="輸入號碼" />
             <button id="setNumber" type="button">設定號碼</button>
         </div>
+
         <div class="control-group">
             <textarea id="leftCustomText" placeholder="輸入左側文字，可換行"></textarea>
             <button id="setLeftText" type="button">設定左側文字</button>
         </div>
+
         <div class="control-group">
             <textarea id="rightCustomText" placeholder="輸入右側文字，可換行"></textarea>
             <button id="setRightText" type="button">設定右側文字</button>
         </div>
 
         <div class="control-group">
-            <label for="featuredEditorInput">編輯精選內容 (每行一筆)</label>
-            <textarea id="featuredEditorInput" placeholder="格式： 圖片網址,連結文字,https://..."></textarea>
-            <button id="saveFeaturedContents" type="button">儲存精選內容</button>
+            <label for="featuredEditorInput">編輯精選連結 (每行一筆)</label>
+            <textarea id="featuredEditorInput" placeholder="格式： 連結文字,https://..."></textarea>
+            <button id="saveFeaturedContents" type="button">儲存精選連結</button>
         </div>
 
         <div class="control-group">
             <label for="passedNumbersInput">手動編輯過號列表 (用逗號,分隔)</label>
             <textarea id="passedNumbersInput" placeholder="例如： 5, 8, 12"></textarea>
             <button id="savePassedNumbers" type="button">儲存過號列表</button>
-        </div>
-        <div class="control-group">
-            <label for="linksEditorInput">編輯相關連結 (每行一筆)</label>
-            <textarea id="linksEditorInput" placeholder="格式： 連結標題,https://..."></textarea>
-            <button id="saveLinks" type="button">儲存連結列表</button>
         </div>
 
         <div class="reset-zone">
@@ -94,8 +91,8 @@
                 <button id="resetNumber" type="button" class="btn-reset-single">重置號碼 (歸0)</button>
                 <button id="resetLeftText" type="button" class="btn-reset-single">重置左側文字</button>
                 <button id="resetRightText" type="button" class="btn-reset-single">重置右側文字</button>
-                <button id="resetFeaturedContents" type="button" class="btn-reset-single">重置精選內容</button> <button id="resetPassed" type="button" class="btn-reset-single">重置過號列表</button>
-                <button id="resetLinks" type="button" class="btn-reset-single">重置連結列表</button>
+                <button id="resetFeaturedContents" type="button" class="btn-reset-single">重置精選連結</button>
+                <button id="resetPassed" type="button" class="btn-reset-single">重置過號列表</button>
             </div>
             <button id="resetAll" type="button">💥 重置所有 (全部歸0)</button>
         </div>
@@ -113,11 +110,8 @@
         const passedNumbersInputEl = document.getElementById("passedNumbersInput");
         const leftCustomTextInput = document.getElementById("leftCustomText");
         const rightCustomTextInput = document.getElementById("rightCustomText");
-        const linksEditorInput = document.getElementById("linksEditorInput");
 
-        // 【修改】 抓取精選內容編輯器
         const featuredEditorInput = document.getElementById("featuredEditorInput");
-        // (移除舊的精選內容輸入框)
 
         // --- 2. 全域變數 ---
         let token = "";
@@ -140,16 +134,13 @@
         socket.on("updatePassed", (numbers) => {
             if (numbers && Array.isArray(numbers)) { passedNumbersInputEl.value = numbers.join(", "); } else { passedNumbersInputEl.value = ""; }
         });
-        socket.on("updateLinks", (links) => {
-            if (links && Array.isArray(links)) { const textValue = links.map(link => `${link.title},${link.url}`).join("\n"); linksEditorInput.value = textValue; } else { linksEditorInput.value = ""; }
-        });
 
         // 【修改】 監聽精選內容列表
         socket.on("updateFeaturedContents", (contents) => {
             if (contents && Array.isArray(contents)) {
                 // 將陣列 [{...}] 轉回文字編輯器的格式
                 const textValue = contents.map(item => 
-                    `${item.imageUrl},${item.linkText},${item.linkUrl}`
+                    `${item.linkText},${item.linkUrl}` // 移除 imageUrl
                 ).join("\n");
                 featuredEditorInput.value = textValue;
             } else {
@@ -161,14 +152,11 @@
         async function apiRequest(endpoint, body) { try { const res = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...body, token }), }); if (!res.ok) { const errorData = await res.json(); if (res.status === 403) { alert("密碼驗證失敗或 Token 已過期，請重新登入。"); showLogin(); } else { alert("發生錯誤：" + (errorData.error || "未知錯誤")); } return false; } return true; } catch (err) { alert("網路連線失敗或伺服器無回應：" + err.message); return false; } }
 
         // --- 7. 控制台按鈕功能 ---
-
-        // (changeNumber, setNumber, setLeftText, setRightText, savePassedNumbers, saveLinks 保持不變)
         async function changeNumber(direction) { await apiRequest("/change-number", { direction }); }
         async function setNumber() { const num = document.getElementById("manualNumber").value; if (num === "") return; const success = await apiRequest("/set-number", { number: num }); if (success) { document.getElementById("manualNumber").value = ""; } }
         async function setLeftText() { const text = leftCustomTextInput.value; const success = await apiRequest("/set-left-text", { text }); if (success) { leftCustomTextInput.value = ""; } }
         async function setRightText() { const text = rightCustomTextInput.value; const success = await apiRequest("/set-right-text", { text }); if (success) { rightCustomTextInput.value = ""; } }
         async function savePassedNumbers() { const text = passedNumbersInputEl.value; const numbersArray = text.split(",").map((n) => n.trim()).filter((n) => n.length > 0).map((n) => Number(n)); const success = await apiRequest("/set-passed-numbers", { numbers: numbersArray, }); if (success) { alert("過號列表已儲存。"); } }
-        async function saveLinks() { const text = linksEditorInput.value; const linksArray = text.split('\n').map(line => { const parts = line.split(','); if (parts.length >= 2) { return { title: parts[0].trim(), url: parts.slice(1).join(',').trim() }; } return null; }).filter(Boolean); const success = await apiRequest("/set-links", { links: linksArray }); if (success) { alert("連結列表已儲存。"); } }
 
         // 【修改】 儲存精選內容
         async function saveFeaturedContents() {
@@ -179,24 +167,19 @@
                 .split('\n')
                 .map(line => {
                     const parts = line.split(',');
-                    if (parts.length >= 3) {
+                    if (parts.length >= 2) {
                         return {
-                            imageUrl: parts[0].trim(),
-                            linkText: parts[1].trim(),
-                            linkUrl: parts.slice(2).join(',').trim() // 處理 URL 中可能包含逗號
+                            linkText: parts[0].trim(),
+                            linkUrl: parts.slice(1).join(',').trim() // 處理 URL 中可能包含逗號
                         };
-                    } else if (parts.length === 2) { // 允許只有圖片和文字
-                        return { imageUrl: parts[0].trim(), linkText: parts[1].trim(), linkUrl: '' };
-                    } else if (parts.length === 1 && parts[0].trim() !== '') { // 允許只有圖片
-                        return { imageUrl: parts[0].trim(), linkText: '', linkUrl: '' };
                     }
                     return null; // 格式不符
                 })
-                .filter(Boolean); // 過濾掉格式不符的 null
+                .filter(item => item && item.linkText && item.linkUrl); // 過濾掉格式不符或不完整的
 
             const success = await apiRequest("/set-featured-contents", { contents: contentsArray });
             if (success) {
-                alert("精選內容已儲存。");
+                alert("精選連結已儲存。");
             }
         }
 
@@ -205,16 +188,14 @@
         async function resetRightText() { if (!confirm("確定要清空「右側文字」嗎？")) return; const success = await apiRequest("/set-right-text", { text: "" }); if (success) { rightCustomTextInput.value = ""; alert("右側文字已清空。"); } }
         async function resetNumber() { if (!confirm("確定要將「目前號碼」重置為 0 嗎？ (會將現有號碼加入過號列表)")) return; const success = await apiRequest("/set-number", { number: 0 }); if (success) { document.getElementById("manualNumber").value = ""; alert("號碼已重置為 0。"); } }
         async function resetPassed() { if (!confirm("確定要清空「已叫號碼(過號)」列表嗎？")) return; const success = await apiRequest("/set-passed-numbers", { numbers: [] }); if (success) { alert("過號列表已清空。"); } }
-        async function resetLinks() { if (!confirm("確定要清空「連結列表」嗎？")) return; const success = await apiRequest("/set-links", { links: [] }); if (success) { alert("連結列表已清空。"); } }
-
-        // 【修改】 重置精選內容
+        
         async function resetFeaturedContents() {
-            if (!confirm("確定要清空「精選內容」嗎？")) {
+            if (!confirm("確定要清空「精選連結」嗎？")) {
                 return;
             }
             const success = await apiRequest("/set-featured-contents", { contents: [] });
             if (success) {
-                alert("精選內容已清空。");
+                alert("精選連結已清空。");
             }
         }
         
@@ -236,18 +217,13 @@
         document.getElementById("savePassedNumbers").onclick = savePassedNumbers;
         document.getElementById("setLeftText").onclick = setLeftText;
         document.getElementById("setRightText").onclick = setRightText;
-        document.getElementById("saveLinks").onclick = saveLinks;
-
-        // 【修改】 綁定精選內容按鈕
         document.getElementById("saveFeaturedContents").onclick = saveFeaturedContents;
         
-        // 【修改】 綁定重置按鈕
         document.getElementById("resetNumber").onclick = resetNumber;
         document.getElementById("resetLeftText").onclick = resetLeftText;
         document.getElementById("resetRightText").onclick = resetRightText;
-        document.getElementById("resetFeaturedContents").onclick = resetFeaturedContents; // 修改
+        document.getElementById("resetFeaturedContents").onclick = resetFeaturedContents;
         document.getElementById("resetPassed").onclick = resetPassed;
-        document.getElementById("resetLinks").onclick = resetLinks;
         document.getElementById("resetAll").onclick = resetAll;
 
     </script>
