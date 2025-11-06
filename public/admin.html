@@ -36,23 +36,19 @@
         
         <div class="control-group list-editor">
             <label>編輯精選連結</label>
-            <ul id="featured-list-ui"></ul>
-            <div class="input-group">
+            <ul id="featured-list-ui"></ul> <div class="input-group">
                 <input type="text" id="new-link-text" placeholder="連結文字">
                 <input type="text" id="new-link-url" placeholder="https://... 網址">
                 <button id="add-featured-btn" type="button" class="btn-add">+</button>
             </div>
-            <button id="saveFeaturedContents" type="button">儲存精選連結</button>
         </div>
 
         <div class="control-group list-editor">
             <label>手動編輯過號列表</label>
-            <ul id="passed-list-ui"></ul>
-            <div class="input-group">
+            <ul id="passed-list-ui"></ul> <div class="input-group">
                 <input type="number" id="new-passed-number" placeholder="輸入號碼">
                 <button id="add-passed-btn" type="button" class="btn-add">+</button>
             </div>
-            <button id="savePassedNumbers" type="button">儲存過號列表</button>
         </div>
 
         <div class="control-group admin-log-container">
@@ -73,6 +69,8 @@
             <button id="resetAll" type="button">💥 重置所有 (全部歸0)</button>
         </div>
     </div>
+    
+    <div id="toast"></div>
 
     <script src="/js/admin.js"></script>
 </body>
