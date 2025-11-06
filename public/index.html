@@ -28,49 +28,33 @@
         #passedList { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
         #passedList li { font-size: clamp(2.5rem, 7vw, 3.5rem); color: #888; background: #e0e0e0; padding: 5px 20px; border-radius: 10px; min-width: 40px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
 
-        /* 【修改】 精選內容區塊 樣式 */
+        /* 【修改】 精選連結區塊 樣式 */
         #featured-container {
             margin-top: 25px;
             width: 100%;
-            display: flex; /* 改為 flex */
-            flex-direction: column; /* 垂直排列 */
+            display: flex;
+            flex-direction: column;
             align-items: center;
-            gap: 20px; /* 每個項目之間的間距 */
+            gap: 10px; /* 每個連結間距 */
         }
-        /* 動態產生的精選項目 */
-        .featured-item {
-            display: inline-block;
-            text-decoration: none;
-            color: inherit;
-        }
-        .featured-item img {
-            max-width: 90%; 
-            width: 400px; 
-            height: auto;
-            border-radius: 8px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-            display: block;
-            margin: 0 auto;
-        }
-        .featured-item span {
-            display: block;
+        /* 動態產生的精選連結 */
+        .featured-link {
             font-size: clamp(1.4rem, 4vw, 2rem);
-            color: #8b5cf6;
+            color: #8b5cf6; /* 紫色 */
             font-weight: bold;
             text-decoration: none;
-            margin-top: 10px;
+            padding: 8px 15px;
+            border-radius: 8px;
+            background: #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: all 0.2s;
         }
-        .featured-item:hover span {
+        .featured-link:hover {
             text-decoration: underline;
+            background-color: #f0f4f8;
+            transform: translateY(-2px); /* 新增 hover 效果 */
         }
 
-        /* (相關連結區塊 樣式保持不變) */
-        #links-container { margin-top: 25px; width: 100%; display: none; } 
-        #links-container h4 { font-size: clamp(1.5rem, 4vw, 2.2rem); color: #333; margin: 0 0 10px 0; border-top: 1px solid #ccc; padding-top: 15px; }
-        #linksList { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; align-items: center; gap: 10px; }
-        #linksList li a { font-size: clamp(1.2rem, 3.5vw, 1.8rem); color: #2563eb; text-decoration: none; background: #fff; padding: 8px 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); transition: background-color 0.2s; }
-        #linksList li a:hover { background-color: #f0f4f8; text-decoration: underline; }
-        
         /* (QR Code 樣式 - 如果您有加的話) */
         #qr-code-container { position: fixed; bottom: 20px; right: 20px; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); z-index: 100; }
         #qr-code-container img { display: block; width: 120px; height: 120px; }
@@ -94,14 +78,7 @@
     </div>
 
     <div id="featured-container" style="display: none;">
-    </div>
-
-    <div id="links-container" style="display: none;">
-        <h4>相關連結</h4>
-        <ul id="linksList">
-            </ul>
-    </div>
-
+        </div>
 
     <script>
         const socket = io();
@@ -110,12 +87,8 @@
         const leftTextEl = document.getElementById("leftText");
         const rightTextEl = document.getElementById("rightText");
         const passedListEl = document.getElementById("passedList");
-        const linksListEl = document.getElementById("linksList");
-        const linksContainerEl = document.getElementById("links-container");
-
-        // 【修改】 抓取精選內容容器
+        
         const featuredContainerEl = document.getElementById("featured-container");
-        // (移除舊的 featuredImageEl 和 featuredLinkTextEl)
 
         socket.on("update", (num) => { numberEl.textContent = num; });
         socket.on("updateLeftText", (text) => { leftTextEl.innerHTML = text || ""; });
@@ -132,27 +105,9 @@
             }
         });
 
-        socket.on("updateLinks", (links) => {
-            linksListEl.innerHTML = "";
-            if (links && links.length > 0) {
-                linksContainerEl.style.display = "block";
-                links.forEach(link => {
-                    const li = document.createElement("li");
-                    const a = document.createElement("a");
-                    a.href = link.url;
-                    a.textContent = link.title;
-                    a.target = "_blank";
-                    li.appendChild(a);
-                    linksListEl.appendChild(li);
-                });
-            } else {
-                linksContainerEl.style.display = "none";
-            }
-        });
-
         /*
          * =============================================
-         * 【修改】 精選內容的顯示邏輯 (改為迴圈)
+         * 【修改】 精選內容的顯示邏輯 (移除圖片)
          * =============================================
          */
         socket.on("updateFeaturedContents", (contents) => {
@@ -165,37 +120,22 @@
                 
                 // 3. 迴圈建立每個項目
                 contents.forEach(item => {
-                    // 檢查是否為空項目
-                    if (!item.imageUrl && !item.linkText) {
-                        return; // 跳過這個空項目
-                    }
-
-                    // 建立 <a> 標籤
-                    const a = document.createElement("a");
-                    a.className = "featured-item";
-                    a.target = "_blank";
-                    if (item.linkUrl) {
+                    // 必須同時有文字和 URL
+                    if (item.linkText && item.linkUrl) {
+                        const a = document.createElement("a");
+                        a.className = "featured-link"; // 使用新的 CSS class
+                        a.target = "_blank";
                         a.href = item.linkUrl;
+                        a.textContent = item.linkText;
+                        featuredContainerEl.appendChild(a);
                     }
-
-                    // 建立 <img> 標籤 (如果有圖片)
-                    if (item.imageUrl) {
-                        const img = document.createElement("img");
-                        img.src = item.imageUrl;
-                        img.alt = item.linkText || "精選內容";
-                        a.appendChild(img);
-                    }
-                    
-                    // 建立 <span> 標籤 (如果有文字)
-                    if (item.linkText) {
-                        const span = document.createElement("span");
-                        span.textContent = item.linkText;
-                        a.appendChild(span);
-                    }
-
-                    // 將組合好的 <a> 項目加入容器
-                    featuredContainerEl.appendChild(a);
                 });
+
+                // 如果過濾後一個項目都沒有，也隱藏
+                if (featuredContainerEl.children.length === 0) {
+                     featuredContainerEl.style.display = "none";
+                }
+
             } else {
                 // 4. 沒有內容，隱藏容器
                 featuredContainerEl.style.display = "none";
