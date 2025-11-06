@@ -2,7 +2,7 @@
  * ==========================================
  * 伺服器 (index.js)
  * * (無 db.json，純記憶體版本)
- * * (精選內容 已簡化為 僅文字連結)
+ * * (已完全移除精選內容的圖片功能)
  * ==========================================
  */
 
@@ -90,7 +90,7 @@ app.post("/set-passed-numbers", authMiddleware, (req, res) => {
 });
 
 
-// 【修改】 API 驗證邏輯
+// 【修改】 API 驗證邏輯 (移除 imageUrl)
 app.post("/set-featured-contents", authMiddleware, (req, res) => {
     const { contents } = req.body; 
     
@@ -98,13 +98,13 @@ app.post("/set-featured-contents", authMiddleware, (req, res) => {
         return res.status(400).json({ error: "Input must be an array." });
     }
 
-    // 驗證陣列中的物件 (必須有文字和網址)
-    const sanitizedContents = contents.filter(item => 
-        item && item.linkText && item.linkUrl
-    ).map(item => ({ 
-        linkText: item.linkText || '',
-        linkUrl: item.linkUrl || ''
-    }));
+    // 驗證陣列中的物件 (只保留 linkText 和 linkUrl)
+    const sanitizedContents = contents
+        .filter(item => item && typeof item === 'object') // 確保是物件
+        .map(item => ({ 
+            linkText: item.linkText || '', // 預設為空字串
+            linkUrl: item.linkUrl || ''  // 預設為空字串
+        }));
 
     featuredContents = sanitizedContents;
     io.emit("updateFeaturedContents", featuredContents); 
