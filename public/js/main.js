@@ -11,14 +11,15 @@ const lastUpdatedEl = document.getElementById("last-updated");
 const localMuteBtn = document.getElementById("local-mute-btn");
 const featuredEmptyMsg = document.getElementById("featured-empty-msg");
 const passedContainerEl = document.getElementById("passed-container"); 
-const soundPrompt = document.getElementById("sound-prompt"); // 【新】
+const soundPrompt = document.getElementById("sound-prompt");
+const copyLinkBtn = document.getElementById("copy-link-btn"); // 【新】
 
 // --- 3. 前台全域狀態 ---
 let isSoundEnabled = true;
 let isLocallyMuted = false;
 let lastUpdateTime = null;
 let isPublic = true;
-let audioPermissionGranted = false; // 【新】 標記是否已取得權限
+let audioPermissionGranted = false;
 
 // --- 4. Socket.io 連線狀態監聽 ---
 socket.on("connect", () => {
@@ -65,31 +66,22 @@ socket.on("updateTimestamp", (timestamp) => {
 
 // --- 【新】 獨立的播放音效函式 ---
 function playNotificationSound() {
-    // 如果全域關閉、本機靜音，或音效元件不存在，則不播放
     if (!notifySound || !isSoundEnabled || isLocallyMuted) {
         return;
     }
-
-    // 如果已取得權限，就直接播放
     if (audioPermissionGranted) {
         notifySound.play().catch(e => console.warn("音效播放失敗 (已有權限):", e));
         return;
     }
-
-    // 如果尚未取得權限，嘗試播放
     const playPromise = notifySound.play();
     if (playPromise !== undefined) {
         playPromise.then(() => {
-            // 播放成功！標記權限
             audioPermissionGranted = true;
-            // (不要隱藏提示，讓它作為切換按鈕)
-            updateMuteButtons(false); // 確保按鈕同步為 "開啟" 狀態
+            updateMuteButtons(false); 
         }).catch(error => {
-            // 播放失敗，顯示提示
             console.warn("音效播放失敗，等待使用者互動:", error);
             if (soundPrompt) {
                 soundPrompt.style.display = 'block';
-                // 【新】 設定初始文字
                 soundPrompt.textContent = "點此啟用提示音效";
                 soundPrompt.classList.remove("is-active");
             }
@@ -101,10 +93,7 @@ function playNotificationSound() {
 socket.on("update", (num) => {
     if (numberEl.textContent !== String(num)) {
         numberEl.textContent = num;
-        
-        // --- 【新】 呼叫獨立的播放函式 ---
         playNotificationSound(); 
-        
         document.title = `目前號碼 ${num} - 候位顯示`;
         numberEl.classList.add("updated");
         setTimeout(() => { numberEl.classList.remove("updated"); }, 500);
@@ -206,13 +195,15 @@ function updateMuteButtons(mutedState) {
     isLocallyMuted = mutedState;
 
     // 1. 更新 localMuteBtn (圖示按鈕)
-    localMuteBtn.classList.toggle("muted", mutedState);
-    if (mutedState) {
-        localMuteBtn.textContent = "🔇";
-        localMuteBtn.setAttribute("aria-label", "取消靜音");
-    } else {
-        localMuteBtn.textContent = "🔈";
-        localMuteBtn.setAttribute("aria-label", "靜音");
+    if (localMuteBtn) {
+        localMuteBtn.classList.toggle("muted", mutedState);
+        if (mutedState) {
+            localMuteBtn.textContent = "🔇";
+            localMuteBtn.setAttribute("aria-label", "取消靜音");
+        } else {
+            localMuteBtn.textContent = "🔈";
+            localMuteBtn.setAttribute("aria-label", "靜音");
+        }
     }
 
     // 2. 更新 soundPrompt (文字按鈕), 僅在權限已取得時
@@ -265,6 +256,21 @@ if(localMuteBtn) {
     });
 }
 
+// 【新】 綁定複製連結按鈕
+if (copyLinkBtn) {
+    copyLinkBtn.addEventListener("click", () => {
+        // 使用 navigator.clipboard API
+        navigator.clipboard.writeText(window.location.href).then(() => {
+            // 成功
+            alert("已複製目前頁面網址！\n您可以將網址貼到瀏覽器中打開。");
+        }).catch(err => {
+            // 失敗 (例如在 http 環境下或瀏覽器不支援)
+            console.error("複製網址失敗:", err);
+            alert("複製失敗，請手動複製網址。");
+        });
+    });
+}
+
+
 // 首次載入時，嘗試自動播放以取得權限
-// (如果失敗，playNotificationSound 內部會處理提示的顯示)
 playNotificationSound();
