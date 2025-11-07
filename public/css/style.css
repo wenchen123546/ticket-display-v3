@@ -139,18 +139,45 @@ h1 { font-size: var(--font-h1); color: var(--color-danger); margin: 0; }
 
 /* --- 4. 浮動元件 --- */
 #qr-code-container { 
-    /* ... (原樣式) ... */
-    position: fixed; bottom: 20px; right: 20px; background: white; 
-    padding: 10px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); 
+    position: fixed; 
+    bottom: 20px; 
+    right: 20px; 
+    background: white; 
+    padding: 10px; 
+    border-radius: 8px; 
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); 
     z-index: 100; 
 }
-#qr-code-placeholder { width: 120px; height: 120px; display: flex; justify-content: center; align-items: center; }
-#qr-code-placeholder img, #qr-code-placeholder canvas { width: 100% !important; height: 100% !important; }
+#qr-code-placeholder { 
+    width: 120px; 
+    height: 120px; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+}
+#qr-code-placeholder img,
+#qr-code-placeholder canvas { width: 100% !important; height: 100% !important; }
 #qr-code-container p { margin: 5px 0 0 0; font-size: 0.8rem; color: var(--color-text); }
 
-#local-mute-btn { /* ... (原樣式) ... */ }
-/* ... (原樣式) ... */
-#local-mute-btn.muted { background-color: var(--color-mute); color: white; }
+#local-mute-btn { 
+    position: fixed; 
+    bottom: 20px; 
+    left: 20px; 
+    z-index: 100; 
+    font-size: 1.5rem; 
+    background: var(--color-bg-light); 
+    border: 1px solid var(--color-border); 
+    border-radius: 50%; 
+    width: 45px; 
+    height: 45px; 
+    cursor: pointer; 
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15); 
+    transition: background-color 0.2s, color 0.2s; 
+}
+#local-mute-btn.muted { 
+    background-color: var(--color-mute); 
+    color: white; 
+}
 
 @media (max-width: 768px) {
     .content-wrapper { gap: 15px; } /* 縮小手機間距 */
@@ -164,12 +191,42 @@ h1 { font-size: var(--font-h1); color: var(--color-danger); margin: 0; }
     #local-mute-btn { bottom: 10px; left: 10px; }
 }
 
-#status-bar { /* ... (原樣式) ... */ }
+#status-bar { 
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    background-color: var(--color-danger); 
+    color: white; 
+    padding: 8px; 
+    font-weight: bold; 
+    text-align: center; 
+    z-index: 1000; 
+    transform: translateY(-100%); 
+    transition: transform 0.3s ease; 
+}
 #status-bar.visible { transform: translateY(0); }
 
-/* --- 5. 空狀態提示 (CSS Class-based) --- */
-.empty-state-message { /* ... (原樣式) ... */ }
-#passed-container.is-empty .empty-state-message { display: block; }
-#passed-container.is-empty #passedList { display: none; }
-#featured-container.is-empty .empty-state-message { display: block; }
-#featured-container.is-empty .featured-link { display: none; }
+/* --- 5. 【改善】 空狀態提示 (CSS Class-based) --- */
+.empty-state-message {
+    display: none; /* 預設隱藏 */
+    font-size: 1.2rem;
+    color: var(--color-text-lightest);
+    margin: 10px 0;
+    font-style: italic;
+}
+
+/* 當容器被 JS 加上 .is-empty class 時 */
+#passed-container.is-empty .empty-state-message {
+    display: block; /* 顯示提示 */
+}
+#passed-container.is-empty #passedList {
+    display: none; /* 隱藏列表 */
+}
+
+#featured-container.is-empty .empty-state-message {
+    display: block; /* 顯示提示 */
+}
+#featured-container.is-empty .featured-link {
+    display: none; /* 隱藏連結 */
+}
