@@ -305,26 +305,39 @@ textarea { height: 80px; text-align: left; padding: 10px; }
 
 
 /* --- 9. 音效開關 (移到 Card 內部) --- */
-/* * * * ********** 這裡是關鍵修正 **********
- * 1. 提高權重 (Specificity)
- * 2. 修正寬度和置中
- */
-.admin-card .control-group.sound-toggle-group { 
-    flex-direction: row; /* 修正：強制水平排列 */
+/* (容器樣式) */
+.control-group.sound-toggle-group { 
+    flex-direction: row; 
     justify-content: center; 
-    align-items: center; /* 垂直置中 */
+    align-items: center; 
     gap: 10px; 
     background: #f9f9f9; 
     border: 1px solid var(--color-border); 
     padding: 10px;
-    
-    width: auto; /* 修正：覆蓋 width: 100% */
-    max-width: 300px; /* 修正：恢復最大寬度 */
-    margin-left: auto; /* 修正：使其置中 */
-    margin-right: auto; /* 修正：使其置中 */
+    width: auto; 
+    max-width: 300px; 
+    margin-left: auto; 
+    margin-right: auto; 
 }
-.sound-toggle-group label { margin-bottom: 0; }
-.sound-toggle-group input[type="checkbox"] { margin-top: 0; }
+
+/* * * ********** 這裡是關鍵修正 **********
+ * 覆蓋 .control-group label 的 display: block;
+ * 讓 label 和 checkbox 可以並排
+ */
+.sound-toggle-group label { 
+    display: inline-block; /* 修正：使其可以並排 */
+    margin-bottom: 0; /* 修正：移除 block 帶來的 margin */
+    font-size: 1.2rem; /* 恢復字體大小 */
+    font-weight: bold;
+    color: var(--color-text);
+    margin: 0;
+}
+.sound-toggle-group input[type="checkbox"] { 
+    margin-top: 0; /* 修正：移除 input 的 margin */
+    width: 24px; /* 恢復大小 */
+    height: 24px; /* 恢復大小 */
+    cursor: pointer;
+}
 /* *************************************** */
 
 
