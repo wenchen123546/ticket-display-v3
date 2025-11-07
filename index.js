@@ -4,15 +4,22 @@
  * * (使用 Upstash Redis 資料庫)
  * * (已加入「音效開關」功能)
  * * (已加入 API 驗證、Redis 事務、Socket 錯誤處理)
- * * * 【2025-11-07 重構】
+ * *
+ * * 【2025-11-07 重構】
  * * 1. 修復 /change-number 競爭條件 (Race Condition)
  * * 2. 變更 featuredContents 為 Redis List 結構
  * * 3. 移除 /set-... 路由，改為即時 API (add/remove)
  * * 4. 移除 io.use() 全域驗證，允許前台 (public) 連線
  * * 5. 移除 MAX_PASSED_NUMBERS (5筆) 的資料讀取與寫入限制
- * * * 【2025-11-07 優化】
+ * *
+ * * 【2025-11-07 優化】
  * * 6. 【A. 修改】 將 KEY_PASSED_NUMBERS 從 LIST 改為 ZSET (Sorted Set)
  * * 以實現自動由小到大排序
+ * *
+ * * 【2025-11-08 改善 - 來自 Gemini】
+ * * 1. 【1.B】 使用 Lua 腳本修復 /change-number 'prev' 的競爭條件
+ * * 2. 【2.A】 增加 /api/passed/clear 和 /api/featured/clear API
+ * * 3. 【3.A】 調整 Socket.io 連線日誌與 disconnect 監聽器位置
  * ==========================================
  */
 
@@ -50,6 +57,21 @@ const redis = new Redis(REDIS_URL, {
 });
 redis.on('connect', () => { console.log("✅ 成功連線到 Upstash Redis 資料庫。"); });
 redis.on('error', (err) => { console.error("❌ Redis 連線錯誤:", err); process.exit(1); });
+
+// --- 【1.B 改善】定義一個原子操作的 Lua 腳本 ---
+// 'decrIfPositive' (如果大於 0 才減 1)
+redis.defineCommand("decrIfPositive", {
+    numberOfKeys: 1,
+    lua: `
+        local currentValue = tonumber(redis.call("GET", KEYS[1]))
+        if currentValue > 0 then
+            return redis.call("DECR", KEYS[1])
+        else
+            return currentValue
+        end
+    `,
+});
+
 
 // --- 6. Redis Keys & 全域狀態 ---
 const KEY_CURRENT_NUMBER = 'callsys:number';
@@ -121,14 +143,12 @@ app.post("/change-number", authMiddleware, async (req, res) => {
         if (direction === "next") {
             num = await redis.incr(KEY_CURRENT_NUMBER);
         }
+        // --- 【1.B 改善】 使用 Lua 腳本確保原子性 ---
         else if (direction === "prev") {
-            const current = await redis.get(KEY_CURRENT_NUMBER);
-            if (Number(current) > 0) {
-                num = await redis.decr(KEY_CURRENT_NUMBER);
-            } else {
-                num = 0;
-            }
-        } else {
+            num = await redis.decrIfPositive(KEY_CURRENT_NUMBER);
+        } 
+        // --- 
+        else {
             num = await redis.get(KEY_CURRENT_NUMBER) || 0;
         }
 
@@ -171,11 +191,9 @@ app.post("/api/passed/add", authMiddleware, async (req, res) => {
         }
 
         // 【A. 修改】 從 rpush 改為 zadd
-        // ZADD 會自動處理重複，如果號碼已存在，它只會更新分數 (在這裡沒影響)
-        // 語法: key, score, member
         await redis.zadd(KEY_PASSED_NUMBERS, num, num);
 
-        await broadcastPassedNumbers(); // 廣播更新 (此函式已被修正為 zrange)
+        await broadcastPassedNumbers(); // 廣播更新
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -212,9 +230,9 @@ app.post("/api/featured/add", authMiddleware, async (req, res) => {
 
 app.post("/api/featured/remove", authMiddleware, async (req, res) => {
     try {
-        const { linkText, linkUrl } = req.body; 
+        const { linkText, linkUrl } = req.body;
         if (!linkText || !linkUrl) {
-             return res.status(400).json({ error: "缺少必要參數。" });
+            return res.status(400).json({ error: "缺少必要參數。" });
         }
         const item = { linkText, linkUrl };
 
@@ -223,6 +241,29 @@ app.post("/api/featured/remove", authMiddleware, async (req, res) => {
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
+
+
+// --- 【2.A 功能補強】 單獨清空 API ---
+
+app.post("/api/passed/clear", authMiddleware, async (req, res) => {
+    try {
+        await redis.del(KEY_PASSED_NUMBERS);
+        io.emit("updatePassed", []); // 廣播空陣列
+        await updateTimestamp();
+        res.json({ success: true, message: "過號列表已清空" });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post("/api/featured/clear", authMiddleware, async (req, res) => {
+    try {
+        await redis.del(KEY_FEATURED_CONTENTS);
+        io.emit("updateFeaturedContents", []); // 廣播空陣列
+        await updateTimestamp();
+        res.json({ success: true, message: "精選連結已清空" });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ---
 
 
 app.post("/set-sound-enabled", authMiddleware, async (req, res) => {
@@ -245,8 +286,8 @@ app.post("/reset", authMiddleware, async (req, res) => {
     try {
         const multi = redis.multi();
         multi.set(KEY_CURRENT_NUMBER, 0);
-        multi.del(KEY_PASSED_NUMBERS); // <-- 這行依然有效
-        multi.del(KEY_FEATURED_CONTENTS); 
+        multi.del(KEY_PASSED_NUMBERS);
+        multi.del(KEY_FEATURED_CONTENTS);
         multi.set(KEY_SOUND_ENABLED, "1");
         await multi.exec();
 
@@ -267,23 +308,28 @@ app.post("/reset", authMiddleware, async (req, res) => {
 // --- 10. Socket.io 連線處理 ---
 
 io.on("connection", async (socket) => {
-    
+
     const token = socket.handshake.auth.token;
     const isAdmin = (token === ADMIN_TOKEN && token !== undefined);
 
+    // --- 【3.A 改善】 將日誌和 disconnect 監聽移至 try...catch 之前 ---
     if (isAdmin) {
         console.log("✅ 一個已驗證的 Admin 連線", socket.id);
+        socket.on("disconnect", (reason) => {
+            console.log(`🔌 Admin ${socket.id} 斷線: ${reason}`);
+        });
     } else {
         console.log("🔌 一個 Public User 連線", socket.id);
     }
+    // ---
 
     try {
         const currentNumber = Number(await redis.get(KEY_CURRENT_NUMBER) || 0);
-        
+
         // 【A. 修改】 從 lrange 改為 zrange (ZSET 會自動排序)
         const passedNumbersRaw = await redis.zrange(KEY_PASSED_NUMBERS, 0, -1);
         const passedNumbers = passedNumbersRaw.map(Number);
-        
+
         const featuredContentsJSONs = await redis.lrange(KEY_FEATURED_CONTENTS, 0, -1);
         const featuredContents = featuredContentsJSONs.map(JSON.parse);
 
@@ -302,12 +348,8 @@ io.on("connection", async (socket) => {
         console.error("Socket 連線處理失敗:", e);
         socket.emit("initialStateError", "無法載入初始資料，請稍後重新整理。");
     }
-    
-    if (isAdmin) {
-        socket.on("disconnect", (reason) => {
-            console.log(`🔌 Admin ${socket.id} 斷線: ${reason}`);
-        });
-    }
+
+    // (已移除此處舊的 if (isAdmin) ... 區塊)
 });
 
 // --- 11. 啟動伺服器 ---
