@@ -1,9 +1,22 @@
 /*
  * ==========================================
  * 伺服器 (index.js)
- * ... (舊註解) ...
- *
- * 【2025-11-08 改善 - 來自 Gemini】
+ * * (使用 Upstash Redis 資料庫)
+ * * (已加入「音效開關」功能)
+ * * (已加入 API 驗證、Redis 事務、Socket 錯誤處理)
+ * *
+ * * 【2025-11-07 重構】
+ * * 1. 修復 /change-number 競爭條件 (Race Condition)
+ * * 2. 變更 featuredContents 為 Redis List 結構
+ * * 3. 移除 /set-... 路由，改為即時 API (add/remove)
+ * * 4. 移除 io.use() 全域驗證，允許前台 (public) 連線
+ * * 5. 移除 MAX_PASSED_NUMBERS (5筆) 的資料讀取與寫入限制
+ * *
+ * * 【2025-11-07 優化】
+ * * 6. 【A. 修改】 將 KEY_PASSED_NUMBERS 從 LIST 改為 ZSET (Sorted Set)
+ * * 以實現自動由小到大排序
+ * *
+ * * 【2025-11-08 改善 - 來自 Gemini】
  * * 1. 【1.B】 使用 Lua 腳本修復 /change-number 'prev' 的競爭條件
  * * 2. 【2.A】 增加 /api/passed/clear 和 /api/featured/clear API
  * * 3. 【3.A】 調整 Socket.io 連線日誌與 disconnect 監聽器位置
@@ -48,6 +61,7 @@ redis.on('connect', () => { console.log("✅ 成功連線到 Upstash Redis 資�
 redis.on('error', (err) => { console.error("❌ Redis 連線錯誤:", err); process.exit(1); });
 
 // --- 【1.B 改善】定義一個原子操作的 Lua 腳本 ---
+// 'decrIfPositive' (如果大於 0 才減 1)
 redis.defineCommand("decrIfPositive", {
     numberOfKeys: 1,
     lua: `
