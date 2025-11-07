@@ -306,8 +306,9 @@ textarea { height: 80px; text-align: left; padding: 10px; }
 
 /* --- 9. 音效開關 (移到 Card 內部) --- */
 /* * * * ********** 這裡是關鍵修正 **********
- * 增加 .control-group 選擇器以提高CSS權重，
- * 確保 flex-direction: row 覆蓋掉 .control-group 的 column。
+ * 1. 恢復 max-width: 300px
+ * 2. 增加 width: auto (覆蓋 .control-group 的 width: 100%)
+ * 3. 增加 margin-left/right: auto (使其置中)
  */
 .control-group.sound-toggle-group { 
     flex-direction: row; /* 水平排列 */
@@ -317,7 +318,11 @@ textarea { height: 80px; text-align: left; padding: 10px; }
     background: #f9f9f9; 
     border: 1px solid var(--color-border); 
     padding: 10px;
-    max-width: 100%;
+    
+    width: auto; /* 修正：覆蓋 width: 100% */
+    max-width: 300px; /* 修正：恢復最大寬度 */
+    margin-left: auto; /* 修正：使其置中 */
+    margin-right: auto; /* 修正：使其置中 */
 }
 .sound-toggle-group label { margin-bottom: 0; }
 .sound-toggle-group input[type="checkbox"] { margin-top: 0; }
