@@ -12,7 +12,7 @@
 
 <div id="login-container">
 <h1>後台管理登入</h1>
-<label for="password-input" class="sr-only">管理密碼</label>
+<label for="password-input" class="sr-only">管理 miglia</label>
 <input type="password" id="password-input" placeholder="請輸入管理密碼" />
 <button id="login-button" type="button">登入</button>
 <p id="login-error"></p>
@@ -20,6 +20,12 @@
 
 <div id="admin-panel">
 <h1>目前號碼：<span id="number">0</span></h1>
+
+<div class="control-group button-row" id="main-number-controls">
+<button id="prev" type="button" class="btn-warn">上一號</button>
+<button id="next" type="button" class="btn-success">下一號</button>
+</div>
+
 
 <div class="admin-grid">
 
@@ -30,10 +36,6 @@
 <div class="control-group sound-toggle-group">
 <label for="sound-toggle">啟用前台音效</label>
 <input type="checkbox" id="sound-toggle">
-</div>
-<div class="control-group button-row">
-<button id="prev" type="button" class="btn-warn">上一號</button>
-<button id="next" type="button" class="btn-success">下一號</button>
 </div>
 <div class="control-group">
 <label for="manualNumber">手動設定號碼</label>
