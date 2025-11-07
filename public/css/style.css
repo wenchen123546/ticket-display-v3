@@ -1,4 +1,5 @@
 /* --- 1. 頁面佈局 --- */
+
 :root {
     --color-text: #333;
     --color-text-light: #555;
@@ -12,7 +13,7 @@
     --color-secondary-light: #f5f3ff; /* 精選連結背景 */
     --color-mute: #f44336;
     --color-border: #ccc;
-     
+    
     --font-h1: clamp(1.5rem, 4vw, 2.2rem); /* 縮小 H1 */
     --font-h2: clamp(2rem, 6vw, 3rem); /* 縮小 H2 */
     --font-h3: clamp(1.5rem, 5vw, 2rem); /* 縮小 H3 */
@@ -97,17 +98,26 @@ h1 { font-size: var(--font-h1); color: var(--color-danger); margin: 0; }
     justify-content: center; 
     gap: 10px; 
 }
+
+/* * * * * ********** 這裡是關鍵修正 **********
+ * 將 padding: 5px 20px; (左右 20px) 
+ * 改為 padding: 5px 10px; (左右 10px)
+ * ***************************************
+ */
 #passedList li { 
     font-size: var(--font-passed); 
     color: var(--color-text-lightest); 
     background: #e0e0e0; 
-    padding: 5px 20px; 
+    padding: 5px 10px; /* <-- 【A. 修正】 減少左右空白 */
     border-radius: 10px; 
     min-width: 40px; 
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); 
 }
+/* ***************************************
+ */
 
 /* --- 3. 【D. 改善】精選連結 --- */
+
 #featured-container { 
     margin-top: 25px; 
     width: 100%;
@@ -138,6 +148,7 @@ h1 { font-size: var(--font-h1); color: var(--color-danger); margin: 0; }
 }
 
 /* --- 4. 浮動元件 --- */
+
 #qr-code-container { 
     position: fixed; 
     bottom: 20px; 
@@ -208,6 +219,7 @@ h1 { font-size: var(--font-h1); color: var(--color-danger); margin: 0; }
 #status-bar.visible { transform: translateY(0); }
 
 /* --- 5. 【改善】 空狀態提示 (CSS Class-based) --- */
+
 .empty-state-message {
     display: none; /* 預設隱藏 */
     font-size: 1.2rem;
