@@ -329,7 +329,9 @@ textarea { height: 80px; text-align: left; padding: 10px; }
 
 /* --- 9. 音效開關 (移到 Card 內部) --- */
 
-.control-group.sound-toggle-group { 
+.control-group.sound-toggle-group,
+/* 【新功能】 增加 system-toggle-group 樣式 */
+.control-group.system-toggle-group { 
     flex-direction: row; /* 水平排列 */
     justify-content: center; 
     align-items: center; /* 垂直置中 */
@@ -337,19 +339,20 @@ textarea { height: 80px; text-align: left; padding: 10px; }
     background: #f9f9f9; 
     border: 1px solid var(--color-border); 
     padding: 10px;
-    
-    /* 移除 width: auto; 繼承 width: 100% */
     max-width: 300px; /* 保留最大寬度 */
     margin-left: auto; /* 保留使其置中 */
     margin-right: auto; /* 保留使其置中 */
+    margin-bottom: 20px; /* 【新功能】 確保與下方 reset-zone 有間距 */
 }
 
-.sound-toggle-group label { 
+.sound-toggle-group label,
+.system-toggle-group label { 
     margin-bottom: 0; 
     display: inline; /* 覆蓋 display: block */
 }
 
-.sound-toggle-group input[type="checkbox"] { 
+.sound-toggle-group input[type="checkbox"],
+.system-toggle-group input[type="checkbox"] { 
     margin-top: 0;  /* 覆蓋 margin-top */
     width: auto;    /* 覆蓋 width: 90% */
 }
@@ -386,7 +389,6 @@ textarea { height: 80px; text-align: left; padding: 10px; }
     margin-top: 10px;
 }
 .admin-log-container .btn-clear-log:hover { opacity: 0.9; }
-
 
 /* --- 12. 【A. 新增】 主要號碼控制按鈕的樣式 --- */
 #main-number-controls {
