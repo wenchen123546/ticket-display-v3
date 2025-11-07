@@ -63,17 +63,21 @@ socket.on("update", (num) => {
 });
 
 socket.on("updatePassed", (numbers) => {
-    passedListEl.innerHTML = "";
+    passedListEl.innerHTML = ""; // 1. 清除
     
     const isEmpty = !numbers || numbers.length === 0;
     passedContainerEl.classList.toggle("is-empty", isEmpty);
 
     if (!isEmpty) {
+        // --- 【優化 2】 使用 DocumentFragment ---
+        const fragment = document.createDocumentFragment();
         numbers.forEach((num) => {
             const li = document.createElement("li");
             li.textContent = num;
-            passedListEl.appendChild(li);
+            fragment.appendChild(li); // 先附加到 fragment
         });
+        passedListEl.appendChild(fragment); // 2. 一次性附加
+        // --- 【優化 2 結束】 ---
     }
 });
 
@@ -81,10 +85,13 @@ socket.on("updateFeaturedContents", (contents) => {
     featuredContainerEl.innerHTML = ""; 
     
     const emptyMsgNode = featuredEmptyMsg.cloneNode(true);
-    featuredContainerEl.appendChild(emptyMsgNode);
+    featuredContainerEl.appendChild(emptyMsgNode); // (這個可以先放)
+
+    // --- 【優化 2】 使用 DocumentFragment ---
+    const fragment = document.createDocumentFragment();
+    let hasVisibleLinks = false; 
 
     if (contents && contents.length > 0) {
-        let hasVisibleLinks = false; 
         contents.forEach(item => {
             if (item && item.linkText && item.linkUrl) {
                 const a = document.createElement("a");
@@ -92,16 +99,15 @@ socket.on("updateFeaturedContents", (contents) => {
                 a.target = "_blank";
                 a.href = item.linkUrl;
                 a.textContent = item.linkText;
-                featuredContainerEl.appendChild(a);
+                fragment.appendChild(a); // 先附加到 fragment
                 hasVisibleLinks = true; 
             }
         });
-        
-        featuredContainerEl.classList.toggle("is-empty", !hasVisibleLinks); 
     }
-    else {
-        featuredContainerEl.classList.add("is-empty");
-    }
+    
+    featuredContainerEl.appendChild(fragment); // 一次性附加所有連結
+    featuredContainerEl.classList.toggle("is-empty", !hasVisibleLinks); 
+    // --- 【優化 2 結束】 ---
 });
 
 /*
@@ -152,7 +158,7 @@ try {
 /*
  * =============================================
  * 8. 音效啟用 / 個人靜音
- * (【B. 修正】 -> 【1.A 修正】 修正圖示與狀態顛倒的邏輯)
+ * (【1.A 修正】 修正拼寫錯誤)
  * =============================================
  */
 
