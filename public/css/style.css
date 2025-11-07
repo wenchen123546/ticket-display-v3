@@ -100,22 +100,15 @@ h1 { font-size: var(--font-h1); color: var(--color-danger); margin: 0; }
     gap: 10px; 
 }
 
-/* * * * * ********** 這裡是關鍵修正 **********
- * 將 padding: 5px 20px; (左右 20px) 
- * 改為 padding: 5px 10px; (左右 10px)
- * ***************************************
- */
 #passedList li { 
     font-size: var(--font-passed); 
     color: var(--color-text-lightest); 
     background: #e0e0e0; 
-    padding: 5px 10px; /* <-- 【A. 修正】 減少左右空白 */
+    padding: 5px 10px; 
     border-radius: 10px; 
     min-width: 40px; 
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); 
 }
-/* ***************************************
- */
 
 /* --- 3. 【D. 改善】精選連結 --- */
 
@@ -128,21 +121,20 @@ h1 { font-size: var(--font-h1); color: var(--color-danger); margin: 0; }
     justify-content: center; /* 置中 */
     gap: 12px; 
 }
-/* 新的膠囊按鈕樣式 */
 .featured-link { 
     font-size: var(--font-featured); 
     color: var(--color-secondary); 
     font-weight: bold; 
     text-decoration: none; 
-    padding: 10px 20px; /* 增加內距 */
-    border-radius: 50px; /* 膠囊形狀 */
-    background: var(--color-secondary-light); /* 淺紫色背景 */
+    padding: 10px 20px; 
+    border-radius: 50px; 
+    background: var(--color-secondary-light); 
     border: 1px solid var(--color-secondary);
     box-shadow: 0 2px 4px rgba(0,0,0,0.05); 
     transition: all 0.2s ease-in-out; 
 }
 .featured-link:hover { 
-    background-color: var(--color-secondary); /* Hover 變色 */
+    background-color: var(--color-secondary); 
     color: white;
     transform: translateY(-2px); 
     box-shadow: 0 4px 8px rgba(0,0,0,0.1); 
@@ -191,16 +183,46 @@ h1 { font-size: var(--font-h1); color: var(--color-danger); margin: 0; }
     color: white; 
 }
 
+/* 【新】 複製連結按鈕樣式 */
+#copy-link-btn {
+    position: fixed; 
+    bottom: 80px; /* 放在靜音按鈕上方 */
+    left: 20px; 
+    z-index: 100; 
+    font-size: 1.5rem; 
+    background: var(--color-bg-light); 
+    border: 1px solid var(--color-border); 
+    border-radius: 50%; 
+    width: 45px; 
+    height: 45px; 
+    cursor: pointer; 
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    transition: background-color 0.2s;
+    /* 確保 emoji 居中 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0;
+}
+#copy-link-btn:active { 
+    background-color: #ddd; 
+}
+
+
 @media (max-width: 768px) {
-    .content-wrapper { gap: 15px; } /* 縮小手機間距 */
+    .content-wrapper { gap: 15px; } 
     .card { padding: 15px; }
-    
-    /* 【C. 改善】在手機上隱藏 QR Code */
     #qr-code-container { 
         display: none; 
     }
     
     #local-mute-btn { bottom: 10px; left: 10px; }
+    
+    /* 【新】 複製按鈕 RWD */
+    #copy-link-btn { 
+        bottom: 70px; /* 10px + 45px + 15px */
+        left: 10px; 
+    }
 }
 
 #status-bar { 
@@ -222,39 +244,38 @@ h1 { font-size: var(--font-h1); color: var(--color-danger); margin: 0; }
 /* --- 5. 【改善】 空狀態提示 (CSS Class-based) --- */
 
 .empty-state-message {
-    display: none; /* 預設隱藏 */
+    display: none; 
     font-size: 1.2rem;
     color: var(--color-text-lightest);
     margin: 10px 0;
     font-style: italic;
 }
 
-/* 當容器被 JS 加上 .is-empty class 時 */
 #passed-container.is-empty .empty-state-message {
-    display: block; /* 顯示提示 */
+    display: block; 
 }
 #passed-container.is-empty #passedList {
-    display: none; /* 隱藏列表 */
+    display: none; 
 }
 
 #featured-container.is-empty .empty-state-message {
-    display: block; /* 顯示提示 */
+    display: block; 
 }
 #featured-container.is-empty .featured-link {
-    display: none; /* 隱藏連結 */
+    display: none; 
 }
 
 /* --- 6. 【新功能】 維護模式遮罩 --- */
 
 #maintenance-overlay {
-    display: none; /* 預設隱藏 */
+    display: none; 
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: var(--color-bg); /* 使用 body 背景 */
-    z-index: 9999; /* 必須在所有元件之上 (包含 status-bar) */
+    background: var(--color-bg); 
+    z-index: 9999; 
     flex-direction: column;
     justify-content: center;
     align-items: center;
@@ -263,19 +284,15 @@ h1 { font-size: var(--font-h1); color: var(--color-danger); margin: 0; }
     padding: 20px;
     box-sizing: border-box;
 }
-
 #maintenance-overlay h1 {
     color: var(--color-danger);
     font-size: var(--font-h2);
 }
-
 #maintenance-overlay p {
     font-size: var(--font-featured);
 }
-
-/* 當 body 被 JS 加上 .is-closed class 時 */
 body.is-closed #maintenance-overlay {
-    display: flex; /* 顯示遮罩 */
+    display: flex; 
 }
 
 /* --- 7. 【新】 音效啟用提示 --- */
@@ -292,14 +309,15 @@ body.is-closed #maintenance-overlay {
     z-index: 99;
     cursor: pointer;
     font-weight: bold;
-    animation: pulse-warn 1.5s infinite;
+    /* (移除 animation) */
 }
 
-@keyframes pulse-warn {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-    100% { transform: scale(1); }
+/* (新增) 當按鈕變為「關閉」時，改變顏色 */
+#sound-prompt.is-active {
+    color: var(--color-text-light);
+    background: #f0f0f0;
 }
+
 
 @media (max-width: 768px) {
      #sound-prompt { 
