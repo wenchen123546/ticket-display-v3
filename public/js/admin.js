@@ -176,10 +176,13 @@ async function apiRequest(endpoint, body) {
 
 // --- 8. GUI 渲染函式 (【D. 已修改】) ---
 
-// 【D. 修改】 接收 'numbers' 參數，並綁定 API 到刪除按鈕
+// 【D. 修改】 + 【優化 2】
 function renderPassedListUI(numbers) {
-    passedListUI.innerHTML = "";
+    passedListUI.innerHTML = ""; // 1. 清除
     if (!Array.isArray(numbers)) return;
+
+    // --- 【優化 2】 使用 DocumentFragment ---
+    const fragment = document.createDocumentFragment();
 
     numbers.forEach((number) => {
         const li = document.createElement("li");
@@ -200,15 +203,21 @@ function renderPassedListUI(numbers) {
         };
 
         li.appendChild(deleteBtn);
-        passedListUI.appendChild(li);
+        fragment.appendChild(li); // 先附加到 fragment
     });
+
+    passedListUI.appendChild(fragment); // 2. 一次性附加
+    // --- 【優化 2 結束】 ---
 }
 
-// 【D. 修改】 接收 'contents' 參數，並綁定 API 到刪除按鈕
+// 【D. 修改】 + 【優化 2】
 function renderFeaturedListUI(contents) {
-    featuredListUI.innerHTML = "";
+    featuredListUI.innerHTML = ""; // 1. 清除
     if (!Array.isArray(contents)) return;
     
+    // --- 【優化 2】 使用 DocumentFragment ---
+    const fragment = document.createDocumentFragment();
+
     contents.forEach((item) => {
         const li = document.createElement("li");
         li.innerHTML = `<span>${item.linkText}<br><small style="color: #666;">${item.linkUrl}</small></span>`;
@@ -231,8 +240,11 @@ function renderFeaturedListUI(contents) {
         };
 
         li.appendChild(deleteBtn);
-        featuredListUI.appendChild(li);
+        fragment.appendChild(li); // 先附加到 fragment
     });
+    
+    featuredListUI.appendChild(fragment); // 2. 一次性附加
+    // --- 【優化 2 結束】 ---
 }
 
 // --- 9. 控制台按鈕功能 (【D. 已刪除】) ---
