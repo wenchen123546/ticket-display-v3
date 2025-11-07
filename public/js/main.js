@@ -8,12 +8,12 @@ const featuredContainerEl = document.getElementById("featured-container");
 const statusBar = document.getElementById("status-bar");
 const notifySound = document.getElementById("notify-sound");
 const lastUpdatedEl = document.getElementById("last-updated");
-const localMuteBtn = document.getElementById("local-mute-btn");
+// const localMuteBtn = document.getElementById("local-mute-btn"); // 【修改】 移除
 const featuredEmptyMsg = document.getElementById("featured-empty-msg");
 const passedContainerEl = document.getElementById("passed-container"); 
 const soundPrompt = document.getElementById("sound-prompt");
-const copyLinkBtn = document.getElementById("copy-link-btn"); 
-const copyLinkPrompt = document.getElementById("copy-link-prompt"); // 【新】
+// const copyLinkBtn = document.getElementById("copy-link-btn"); // 【修改】 移除
+const copyLinkPrompt = document.getElementById("copy-link-prompt"); 
 
 // --- 3. 前台全域狀態 ---
 let isSoundEnabled = true;
@@ -21,7 +21,7 @@ let isLocallyMuted = false;
 let lastUpdateTime = null;
 let isPublic = true;
 let audioPermissionGranted = false;
-let isCopying = false; // 【新】 防止重複點擊複製
+let isCopying = false; 
 
 // --- 4. Socket.io 連線狀態監聽 ---
 socket.on("connect", () => {
@@ -187,24 +187,16 @@ try {
 /*
  * =============================================
  * 8. 音效啟用 / 個人靜音
- * (【新】 整合音效權限與雙按鈕同步)
+ * (【修改】 移除 localMuteBtn 邏輯)
  * =============================================
  */
 
 function updateMuteButtons(mutedState) {
     isLocallyMuted = mutedState;
 
-    if (localMuteBtn) {
-        localMuteBtn.classList.toggle("muted", mutedState);
-        if (mutedState) {
-            localMuteBtn.textContent = "🔇";
-            localMuteBtn.setAttribute("aria-label", "取消靜音");
-        } else {
-            localMuteBtn.textContent = "🔈";
-            localMuteBtn.setAttribute("aria-label", "靜音");
-        }
-    }
-
+    // 【修改】 移除 localMuteBtn 的邏輯
+    
+    // 2. 更新 soundPrompt (文字按鈕), 僅在權限已取得時
     if (audioPermissionGranted && soundPrompt) {
         soundPrompt.style.display = 'block'; 
         if (mutedState) {
@@ -235,52 +227,35 @@ if (soundPrompt) {
     });
 }
 
-if(localMuteBtn) {
-    localMuteBtn.addEventListener("click", () => {
-        if (!audioPermissionGranted) {
-            playNotificationSound(); 
-        }
-        updateMuteButtons(!isLocallyMuted);
-    });
-}
-
+// 【修改】 移除 localMuteBtn 的點擊事件
 
 /*
  * =============================================
  * 9. 【新】 複製連結功能
+ * (【修改】 移除 copyLinkBtn 邏輯)
  * =============================================
  */
 
 function copyLink() {
-    // 如果正在複製中 (動畫未結束)，則不執行
     if (isCopying) return; 
-
-    // 檢查是否在安全環境 (HTTPS 或 localhost)
     if (!navigator.clipboard) {
         alert("複製功能僅支援 HTTPS 安全連線。");
         return;
     }
 
     navigator.clipboard.writeText(window.location.href).then(() => {
-        // 成功
         isCopying = true;
         
-        // 暫時改變圖示和文字
-        if (copyLinkBtn) {
-            copyLinkBtn.textContent = "✅";
-            copyLinkBtn.classList.add("is-copied");
-        }
+        // 【修改】 移除 copyLinkBtn 的邏輯
+
         if (copyLinkPrompt) {
             copyLinkPrompt.textContent = "已複製！";
             copyLinkPrompt.classList.add("is-copied");
         }
 
-        // 2 秒後恢復
         setTimeout(() => {
-            if (copyLinkBtn) {
-                copyLinkBtn.textContent = "🔗";
-                copyLinkBtn.classList.remove("is-copied");
-            }
+            // 【修改】 移除 copyLinkBtn 的邏輯
+
             if (copyLinkPrompt) {
                 copyLinkPrompt.textContent = "點此複製網頁連結";
                 copyLinkPrompt.classList.remove("is-copied");
@@ -289,16 +264,12 @@ function copyLink() {
         }, 2000);
 
     }).catch(err => {
-        // 失敗
         console.error("複製網址失敗:", err);
         alert("複製失敗，請手動複製網址。");
     });
 }
 
-// 綁定 *兩個* 複製按鈕
-if (copyLinkBtn) {
-    copyLinkBtn.addEventListener("click", copyLink);
-}
+// 【修改】 移除 copyLinkBtn 的點擊事件
 if (copyLinkPrompt) {
     copyLinkPrompt.addEventListener("click", copyLink);
 }
