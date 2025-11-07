@@ -163,53 +163,7 @@ h1 { font-size: var(--font-h1); color: var(--color-danger); margin: 0; }
 #qr-code-placeholder canvas { width: 100% !important; height: 100% !important; }
 #qr-code-container p { margin: 5px 0 0 0; font-size: 0.8rem; color: var(--color-text); }
 
-#local-mute-btn { 
-    position: fixed; 
-    bottom: 20px; 
-    left: 20px; 
-    z-index: 100; 
-    font-size: 1.5rem; 
-    background: var(--color-bg-light); 
-    border: 1px solid var(--color-border); 
-    border-radius: 50%; 
-    width: 45px; 
-    height: 45px; 
-    cursor: pointer; 
-    box-shadow: 0 4px 10px rgba(0,0,0,0.15); 
-    transition: background-color 0.2s, color 0.2s; 
-}
-#local-mute-btn.muted { 
-    background-color: var(--color-mute); 
-    color: white; 
-}
-
-/* 【修改】 複製連結按鈕樣式 */
-#copy-link-btn {
-    position: fixed; 
-    bottom: 80px; /* 放在靜音按鈕上方 */
-    left: 20px; 
-    z-index: 100; 
-    font-size: 1.5rem; 
-    background: var(--color-bg-light); 
-    border: 1px solid var(--color-border); 
-    border-radius: 50%; 
-    width: 45px; 
-    height: 45px; 
-    cursor: pointer; 
-    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-    transition: background-color 0.2s, color 0.2s;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 0;
-}
-/* 【新】 複製成功時的樣式 */
-#copy-link-btn.is-copied {
-     background-color: var(--color-success);
-     color: white;
-     border-color: var(--color-success);
-}
-
+/* 【修改】 移除 #local-mute-btn 和 #copy-link-btn 的 CSS */
 
 @media (max-width: 768px) {
     .content-wrapper { gap: 15px; } 
@@ -218,12 +172,7 @@ h1 { font-size: var(--font-h1); color: var(--color-danger); margin: 0; }
         display: none; 
     }
     
-    #local-mute-btn { bottom: 10px; left: 10px; }
-    
-    #copy-link-btn { 
-        bottom: 70px; /* 10px + 45px + 10px */
-        left: 10px; 
-    }
+    /* 【修改】 移除 RWD 中的 #local-mute-btn 和 #copy-link-btn */
 }
 
 #status-bar { 
@@ -298,11 +247,11 @@ body.is-closed #maintenance-overlay {
 
 /* --- 7. 文字提示按鈕 (音效 & 複製) --- */
 
-/* 【修改】 音效提示 */
+/* 【修改】 音效提示 (重新排版) */
 #sound-prompt {
     position: fixed;
     bottom: 20px;
-    left: 80px; /* 放在靜音鈕旁邊 */
+    left: 20px; /* 改為 20px */
     background: #fff;
     color: var(--color-warning);
     padding: 10px 15px;
@@ -311,6 +260,8 @@ body.is-closed #maintenance-overlay {
     z-index: 99;
     cursor: pointer;
     font-weight: bold;
+    font-size: 0.9rem; /* 讓按鈕小一點 */
+    transition: background-color 0.2s, color 0.2s;
 }
 
 #sound-prompt.is-active {
@@ -318,19 +269,20 @@ body.is-closed #maintenance-overlay {
     background: #f0f0f0;
 }
 
-/* 【新】 複製連結提示 */
+/* 【修改】 複製連結提示 (重新排版) */
 #copy-link-prompt {
     position: fixed;
-    bottom: 80px; /* 與複製圖示同高 */
-    left: 80px; /* 放在複製圖示旁邊 */
+    bottom: 75px; /* 放在音效按鈕上方 (20px + ~45px + 10px gap) */
+    left: 20px; /* 改為 20px */
     background: #fff;
-    color: var(--color-text-light); /* 改為一般顏色 */
+    color: var(--color-text-light); 
     padding: 10px 15px;
     border-radius: 8px;
     box-shadow: 0 4px 10px rgba(0,0,0,0.15);
     z-index: 99;
     cursor: pointer;
     font-weight: bold;
+    font-size: 0.9rem; /* 讓按鈕小一點 */
     transition: background-color 0.2s, color 0.2s;
 }
 
@@ -342,16 +294,14 @@ body.is-closed #maintenance-overlay {
 
 @media (max-width: 768px) {
      #sound-prompt { 
-        left: 70px; 
+        left: 10px; 
         bottom: 10px;
         padding: 8px 12px;
-        font-size: 0.9rem;
      }
      
      #copy-link-prompt {
-        bottom: 70px;
-        left: 70px;
+        bottom: 65px; /* (10px + ~45px + 10px gap) */
+        left: 10px;
         padding: 8px 12px;
-        font-size: 0.9rem;
     }
 }
