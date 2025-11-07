@@ -9,28 +9,24 @@ const statusBar = document.getElementById("status-bar");
 const passedListUI = document.getElementById("passed-list-ui");
 const newPassedNumberInput = document.getElementById("new-passed-number");
 const addPassedBtn = document.getElementById("add-passed-btn");
-// const savePassedButton = document.getElementById("savePassedNumbers"); // 【D. 刪除】
 const featuredListUI = document.getElementById("featured-list-ui");
 const newLinkTextInput = document.getElementById("new-link-text");
 const newLinkUrlInput = document.getElementById("new-link-url");
 const addFeaturedBtn = document.getElementById("add-featured-btn");
-// const saveFeaturedButton = document.getElementById("saveFeaturedContents"); // 【D. 刪除】
 const soundToggle = document.getElementById("sound-toggle");
+const publicToggle = document.getElementById("public-toggle"); // 【新功能】
 const adminLogUI = document.getElementById("admin-log-ui");
 const clearLogBtn = document.getElementById("clear-log-btn");
 const resetAllBtn = document.getElementById("resetAll");
 const resetAllConfirmBtn = document.getElementById("resetAllConfirm");
 
 // --- 2. 全域變數 ---
-let token = ""; // 僅用於 API 請求
-// let localPassedNumbers = []; // 【D. 刪除】
-// let localFeaturedContents = []; // 【D. 刪除】
+let token = "";
 let resetAllTimer = null;
 
 // --- 3. Socket.io (【B. 已修改】) ---
 const socket = io({ 
     autoConnect: false,
-    // 【B. 新增】 增加 auth 物件
     auth: {
         token: "" 
     }
@@ -47,7 +43,7 @@ function showPanel() {
     loginContainer.style.display = "none";
     adminPanel.style.display = "block";
     document.title = "後台管理 - 控制台";
-    socket.connect(); // 觸發連線
+    socket.connect();
 }
 async function checkToken(tokenToCheck) {
     if (!tokenToCheck) return false;
@@ -67,10 +63,8 @@ async function attemptLogin(tokenToCheck) {
     loginError.textContent = "驗證中...";
     const isValid = await checkToken(tokenToCheck);
     if (isValid) {
-        // 【B. 修改】 設定 API 和 Socket 的 Token
-        token = tokenToCheck; // 用於 API (apiRequest)
-        socket.auth.token = tokenToCheck; // 用於 Socket 連線
-
+        token = tokenToCheck;
+        socket.auth.token = tokenToCheck;
         showPanel();
     } else {
         loginError.textContent = "密碼錯誤";
@@ -106,12 +100,9 @@ socket.on("disconnect", () => {
     statusBar.classList.add("visible");
     adminLog("❌ 連線中斷");
 });
-
-// 【B. 新增】 監聽連線失敗 (例如 token 錯誤)
 socket.on("connect_error", (err) => {
     console.error("Socket 連線失敗:", err.message);
     adminLog(`❌ Socket 連線失敗: ${err.message}`);
-    // 如果是驗證失敗，踢回登入頁
     if (err.message === "Authentication failed") {
         alert("密碼驗證失敗或 Token 已過期，請重新登入。");
         showLogin();
@@ -124,13 +115,11 @@ socket.on("update", (num) => {
 });
 
 socket.on("updatePassed", (numbers) => {
-    // 【D. 修改】 不再儲存到 local，直接傳入 render
     renderPassedListUI(numbers);
     adminLog("過號列表已更新");
 });
 
 socket.on("updateFeaturedContents", (contents) => {
-    // 【D. 修改】 不再儲存到 local，直接傳入 render
     renderFeaturedListUI(contents);
     adminLog("精選連結已更新");
 });
@@ -140,6 +129,14 @@ socket.on("updateSoundSetting", (isEnabled) => {
     soundToggle.checked = isEnabled;
     adminLog(`音效已設為 ${isEnabled ? '開啟' : '關閉'}`);
 });
+
+// 【新功能】 監聽公開狀態
+socket.on("updatePublicStatus", (isPublic) => {
+    console.log("收到公開狀態:", isPublic);
+    publicToggle.checked = isPublic;
+    adminLog(`前台已設為 ${isPublic ? '對外開放' : '關閉維護'}`);
+});
+
 socket.on("updateTimestamp", (timestamp) => {
     console.log("Timestamp updated:", timestamp);
 });
@@ -150,7 +147,7 @@ async function apiRequest(endpoint, body) {
         const res = await fetch(endpoint, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ ...body, token }), // token 來自全域
+            body: JSON.stringify({ ...body, token }),
         });
         if (!res.ok) {
             const errorData = await res.json();
@@ -158,14 +155,11 @@ async function apiRequest(endpoint, body) {
                 alert("密碼驗證失敗或 Token 已過期，請重新登入。");
                 showLogin();
             } else {
-                // 【改善】 改為 adminLog
                 adminLog(`❌ API 錯誤 (${endpoint}): ${errorData.error || "未知錯誤"}`);
                 alert("發生錯誤：" + (errorData.error || "未知錯誤"));
             }
             return false;
         }
-        // 【改善】 成功時也記錄日誌 (可選)
-        // adminLog(`✅ API 請求成功: ${endpoint}`);
         return true;
     } catch (err) {
         adminLog(`❌ 網路連線失敗: ${err.message}`);
@@ -174,16 +168,11 @@ async function apiRequest(endpoint, body) {
     }
 }
 
-// --- 8. GUI 渲染函式 (【D. 已修改】) ---
-
-// 【D. 修改】 + 【優化 2】
+// --- 8. GUI 渲染函式 (【D. 已修改】 + 【優化 2】) ---
 function renderPassedListUI(numbers) {
-    passedListUI.innerHTML = ""; // 1. 清除
+    passedListUI.innerHTML = ""; 
     if (!Array.isArray(numbers)) return;
-
-    // --- 【優化 2】 使用 DocumentFragment ---
     const fragment = document.createDocumentFragment();
-
     numbers.forEach((number) => {
         const li = document.createElement("li");
         li.innerHTML = `<span>${number}</span>`;
@@ -191,33 +180,23 @@ function renderPassedListUI(numbers) {
         deleteBtn.type = "button";
         deleteBtn.className = "delete-item-btn";
         deleteBtn.textContent = "×";
-
-        // 【D. 修改】 刪除按鈕直接呼叫 API
         deleteBtn.onclick = async () => {
             if (confirm(`確定要刪除過號 ${number} 嗎？`)) {
                 deleteBtn.disabled = true;
                 adminLog(`正在刪除過號 ${number}...`);
                 await apiRequest("/api/passed/remove", { number: number });
-                // UI 將透過 Socket.io 的 "updatePassed" 事件自動更新
             }
         };
-
         li.appendChild(deleteBtn);
-        fragment.appendChild(li); // 先附加到 fragment
+        fragment.appendChild(li);
     });
-
-    passedListUI.appendChild(fragment); // 2. 一次性附加
-    // --- 【優化 2 結束】 ---
+    passedListUI.appendChild(fragment);
 }
 
-// 【D. 修改】 + 【優化 2】
 function renderFeaturedListUI(contents) {
-    featuredListUI.innerHTML = ""; // 1. 清除
+    featuredListUI.innerHTML = "";
     if (!Array.isArray(contents)) return;
-    
-    // --- 【優化 2】 使用 DocumentFragment ---
     const fragment = document.createDocumentFragment();
-
     contents.forEach((item) => {
         const li = document.createElement("li");
         li.innerHTML = `<span>${item.linkText}<br><small style="color: #666;">${item.linkUrl}</small></span>`;
@@ -225,8 +204,6 @@ function renderFeaturedListUI(contents) {
         deleteBtn.type = "button";
         deleteBtn.className = "delete-item-btn";
         deleteBtn.textContent = "×";
-
-        // 【D. 修改】 刪除按鈕直接呼叫 API
         deleteBtn.onclick = async () => {
             if (confirm(`確定要刪除連結 ${item.linkText} 嗎？`)) {
                 deleteBtn.disabled = true;
@@ -235,20 +212,15 @@ function renderFeaturedListUI(contents) {
                     linkText: item.linkText,
                     linkUrl: item.linkUrl
                 });
-                // UI 將透過 Socket.io 的 "updateFeaturedContents" 事件自動更新
             }
         };
-
         li.appendChild(deleteBtn);
-        fragment.appendChild(li); // 先附加到 fragment
+        fragment.appendChild(li);
     });
-    
-    featuredListUI.appendChild(fragment); // 2. 一次性附加
-    // --- 【優化 2 結束】 ---
+    featuredListUI.appendChild(fragment);
 }
 
-// --- 9. 控制台按鈕功能 (【D. 已刪除】) ---
-
+// --- 9. 控制台按鈕功能 ---
 async function changeNumber(direction) {
     await apiRequest("/change-number", { direction });
 }
@@ -261,11 +233,7 @@ async function setNumber() {
     }
 }
 
-// --- 【D. 刪除】 savePassedNumbers 和 saveFeaturedContents 函式 ---
-// (已刪除)
-
-
-// --- 重置功能 (保持不變) ---
+// --- 重置功能 ---
 async function resetNumber() {
     if (!confirm("確定要將「目前號碼」重置為 0 嗎？")) return;
     const success = await apiRequest("/set-number", { number: 0 });
@@ -275,13 +243,10 @@ async function resetNumber() {
     }
 }
 
-
-// --- 【2.B 改善】 修正單獨重置功能 ---
-
-async function resetPassed_fixed() { // 名稱可改回 resetPassed
+async function resetPassed_fixed() {
     if (!confirm("確定要清空「已叫號碼(過號)」列表嗎？")) return;
     adminLog("正在清空過號列表...");
-    const success = await apiRequest("/api/passed/clear", {}); // 呼叫新的 API
+    const success = await apiRequest("/api/passed/clear", {});
     if (success) {
         adminLog("✅ 過號列表已清空");
     } else {
@@ -289,20 +254,18 @@ async function resetPassed_fixed() { // 名稱可改回 resetPassed
     }
 }
 
-async function resetFeaturedContents_fixed() { // 名稱可改回 resetFeaturedContents
+async function resetFeaturedContents_fixed() {
     if (!confirm("確定要清空「精選連結」嗎？")) return;
     adminLog("正在清空精選連結...");
-    const success = await apiRequest("/api/featured/clear", {}); // 呼叫新的 API
+    const success = await apiRequest("/api/featured/clear", {});
     if (success) {
         adminLog("✅ 精選連結已清空");
     } else {
         adminLog("❌ 清空精選連結失敗");
     }
 }
-// ---
 
-
-// --- 【B. 改善】 重寫 ResetAll 防呆機制 ---
+// --- ResetAll 防呆機制 ---
 function cancelResetAll() {
     resetAllConfirmBtn.style.display = "none";
     resetAllBtn.style.display = "block";
@@ -313,7 +276,7 @@ function cancelResetAll() {
 }
 async function confirmResetAll() {
     adminLog("⚠️ 正在執行所有重置...");
-    const success = await apiRequest("/reset", {}); // 呼叫 /reset API
+    const success = await apiRequest("/reset", {});
     if (success) {
         document.getElementById("manualNumber").value = "";
         alert("已全部重置。");
@@ -342,11 +305,6 @@ document.getElementById("next").onclick = () => changeNumber("next");
 document.getElementById("prev").onclick = () => changeNumber("prev");
 document.getElementById("setNumber").onclick = setNumber;
 
-// 【D. 刪除】 綁定 Save 按鈕
-// document.getElementById("savePassedNumbers").onclick = savePassedNumbers;
-// document.getElementById("saveFeaturedContents").onclick = saveFeaturedContents;
-
-// 【D. 修改】 綁定到修正後的 "fixed" 函式
 document.getElementById("resetNumber").onclick = resetNumber;
 document.getElementById("resetFeaturedContents").onclick = resetFeaturedContents_fixed;
 document.getElementById("resetPassed").onclick = resetPassed_fixed;
@@ -355,29 +313,24 @@ resetAllBtn.onclick = requestResetAll;
 resetAllConfirmBtn.onclick = confirmResetAll;
 clearLogBtn.onclick = clearAdminLog;
 
-
-// --- (GUI Add 按鈕綁定 - 【D. 已修改】 改為呼叫 API) ---
+// --- (GUI Add 按鈕綁定) ---
 addPassedBtn.onclick = async () => {
     const num = Number(newPassedNumberInput.value);
     if (num <= 0 || !Number.isInteger(num)) {
         alert("請輸入有效的正整數。");
         return;
     }
-    
     addPassedBtn.disabled = true;
     const success = await apiRequest("/api/passed/add", { number: num });
     if (success) {
-        newPassedNumberInput.value = ""; // 成功才清除
+        newPassedNumberInput.value = "";
     }
-    // 失敗的 alert 會由 apiRequest 處理
     addPassedBtn.disabled = false;
-    // UI 將透過 Socket.io 自動更新
 };
 
 addFeaturedBtn.onclick = async () => {
     const text = newLinkTextInput.value.trim();
     const url = newLinkUrlInput.value.trim();
-
     if (!text || !url) {
         alert("「連結文字」和「網址」都必須填寫。");
         return;
@@ -386,28 +339,37 @@ addFeaturedBtn.onclick = async () => {
         alert("網址請務必以 http:// 或 https:// 開頭。");
         return;
     }
-    
     addFeaturedBtn.disabled = true;
     const success = await apiRequest("/api/featured/add", {
         linkText: text,
         linkUrl: url
     });
-
     if (success) {
         newLinkTextInput.value = "";
         newLinkUrlInput.value = "";
     }
     addFeaturedBtn.disabled = false;
-    // UI 將透過 Socket.io 自動更新
 };
 
-// --- 11. 綁定 Enter 鍵 (保持不變) ---
+// --- 11. 綁定 Enter 鍵 ---
 newPassedNumberInput.addEventListener("keyup", (event) => { if (event.key === "Enter") { addPassedBtn.click(); } });
 newLinkTextInput.addEventListener("keyup", (event) => { if (event.key === "Enter") { newLinkUrlInput.focus(); } });
 newLinkUrlInput.addEventListener("keyup", (event) => { if (event.key === "Enter") { addFeaturedBtn.click(); } });
 
-// --- 12. 綁定音效開關 (保持不變) ---
+// --- 12. 綁定開關 ---
 soundToggle.addEventListener("change", () => {
     const isEnabled = soundToggle.checked;
     apiRequest("/set-sound-enabled", { enabled: isEnabled });
+});
+
+// 【新功能】 綁定公開狀態開關
+publicToggle.addEventListener("change", () => {
+    const isPublic = publicToggle.checked;
+    if (!isPublic) {
+        if (!confirm("確定要關閉前台嗎？\n所有使用者將會看到「維護中」畫面。")) {
+            publicToggle.checked = true; // 取消操作，恢復勾選
+            return;
+        }
+    }
+    apiRequest("/set-public-status", { isPublic: isPublic });
 });
