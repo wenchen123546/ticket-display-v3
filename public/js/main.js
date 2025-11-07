@@ -8,10 +8,10 @@ const featuredContainerEl = document.getElementById("featured-container");
 const statusBar = document.getElementById("status-bar");
 const notifySound = document.getElementById("notify-sound"); 
 const lastUpdatedEl = document.getElementById("last-updated");
-const localMuteBtn = document.getElementById("local-mute-btn"); // 個人靜音
-const passedEmptyMsg = document.getElementById("passed-empty-msg"); // 【新增】
-const featuredEmptyMsg = document.getElementById("featured-empty-msg"); // 【新增】
-
+const localMuteBtn = document.getElementById("local-mute-btn"); 
+const passedEmptyMsg = document.getElementById("passed-empty-msg"); 
+const featuredEmptyMsg = document.getElementById("featured-empty-msg");
+const passedContainerEl = document.getElementById("passed-container"); // 【改善】 新增父容器
 
 // --- 3. 前台全域狀態 ---
 let isSoundEnabled = true; // 全域開關 (來自伺服器)
@@ -23,22 +23,33 @@ socket.on("connect", () => {
     console.log("Socket.io 已連接");
     statusBar.classList.remove("visible"); 
 });
+
 socket.on("disconnect", () => {
     console.log("Socket.io 已斷線");
     statusBar.classList.add("visible"); 
     lastUpdatedEl.textContent = "連線中斷...";
 });
 
+// 【改善】 增加初始狀態載入錯誤的監聽
+socket.on("initialStateError", (errorMsg) => {
+    console.error("無法載入初始狀態:", errorMsg);
+    alert(errorMsg); // 提示使用者
+    lastUpdatedEl.textContent = "載入失敗";
+});
+
+
 // --- 5. Socket.io 資料更新監聽 ---
 socket.on("updateSoundSetting", (isEnabled) => {
     console.log("音效設定更新:", isEnabled);
     isSoundEnabled = isEnabled;
 });
+
 socket.on("updateTimestamp", (timestamp) => {
     lastUpdateTime = new Date(timestamp); // 儲存 Date 物件
     const timeString = lastUpdateTime.toLocaleTimeString('zh-TW');
     lastUpdatedEl.textContent = `最後更新於 ${timeString}`;
 });
+
 socket.on("update", (num) => {
     if (numberEl.textContent !== String(num)) {
         numberEl.textContent = num;
@@ -50,14 +61,17 @@ socket.on("update", (num) => {
         setTimeout(() => { numberEl.classList.remove("updated"); }, 500);
     }
 });
+
 socket.on("updatePassed", (numbers) => {
     passedListEl.innerHTML = "";
     const h3 = document.querySelector("#passed-container h3");
+    
+    // 【改善】 使用 classList.toggle 控制空狀態
+    const isEmpty = !numbers || numbers.length === 0;
+    passedContainerEl.classList.toggle("is-empty", isEmpty);
 
-    if (numbers && numbers.length > 0) {
+    if (!isEmpty) {
         h3.style.marginTop = "25px";
-        passedEmptyMsg.style.display = "none"; // 【新增】 隱藏提示
-        
         numbers.forEach((num) => {
             const li = document.createElement("li");
             li.textContent = num;
@@ -65,13 +79,13 @@ socket.on("updatePassed", (numbers) => {
         });
     } else {
         h3.style.marginTop = "0";
-        passedEmptyMsg.style.display = "block"; // 【新增】 顯示提示
     }
 });
+
 socket.on("updateFeaturedContents", (contents) => {
     featuredContainerEl.innerHTML = ""; // 清空
     
-    // 【修改】 確保在有連結時才插入 empty-msg
+    // 【改善】 複製空訊息模板
     const emptyMsgNode = featuredEmptyMsg.cloneNode(true);
     featuredContainerEl.appendChild(emptyMsgNode);
 
@@ -89,23 +103,20 @@ socket.on("updateFeaturedContents", (contents) => {
             }
         });
 
-        if (hasVisibleLinks) {
-            featuredContainerEl.style.display = "flex";
-            emptyMsgNode.style.display = "none"; // 隱藏提示
-        } else {
-            featuredContainerEl.style.display = "block"; // 顯示容器
-            emptyMsgNode.style.display = "block"; // 顯示提示
-        }
+        featuredContainerEl.style.display = "flex"; // 顯示容器
+        // 【改善】 使用 classList.toggle 控制空狀態
+        featuredContainerEl.classList.toggle("is-empty", !hasVisibleLinks); 
+
     } else {
-        featuredContainerEl.style.display = "none";
-        emptyMsgNode.style.display = "none";
+        featuredContainerEl.style.display = "none"; // 隱藏容器
+        featuredContainerEl.classList.add("is-empty");
     }
 });
 
 
 /*
  * =============================================
- * 6. 動態 QR Code 產生器
+ * 6. 動態 QR Code 產生器 (保持不變)
  * =============================================
  */
 try {
@@ -126,7 +137,7 @@ try {
 
 /*
  * =============================================
- * 7. 相對時間自動更新
+ * 7. 相對時間自動更新 (保持不變)
  * =============================================
  */
 try {
@@ -152,33 +163,25 @@ try {
 /*
  * =============================================
  * 8. 音效啟用 / 個人靜音
+ * (【改善】 移除失效的 audio-prompt 邏輯)
  * =============================================
  */
-const audioPrompt = document.getElementById("audio-prompt");
-if (audioPrompt && notifySound) {
-    audioPrompt.addEventListener("click", () => {
-        notifySound.play()
-            .then(() => {
-                console.log("音效已啟用。");
-                audioPrompt.style.opacity = "0";
-                setTimeout(() => { audioPrompt.style.display = "none"; }, 300);
-            })
-            .catch(e => {
-                console.error("音效播放失敗:", e);
-                alert("音效啟用失敗，請檢查瀏覽器設定。");
-            });
-    });
-    // 嘗試自動播放
+
+// 嘗試自動播放 (若失敗，使用者仍可透過 localMuteBtn 控制)
+if (notifySound) {
     notifySound.play().then(() => {
-        audioPrompt.style.display = "none";
+        console.log("音效預載入/自動播放成功。");
     }).catch(e => {
-        // 需要使用者手動點擊
+        console.warn("音效自動播放失敗，可能需要使用者互動。");
     });
 }
+
 if(localMuteBtn) {
     localMuteBtn.addEventListener("click", () => {
         isLocallyMuted = !isLocallyMuted; // 切換狀態
         localMuteBtn.classList.toggle("muted", isLocallyMuted); // 切換 CSS
         localMuteBtn.textContent = isLocallyMuted ? "🔈" : "🔇";
+        // 【改善】 更新 aria-label
+        localMuteBtn.setAttribute("aria-label", isLocallyMuted ? "取消靜音" : "靜音");
     });
 }
