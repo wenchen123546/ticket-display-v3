@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="/css/admin.css">
 </head>
 <body>
+
 <div id="status-bar">連線中斷，正在嘗試重新連線...</div>
 
 <div id="login-container">
@@ -84,6 +85,11 @@
 
 <div class="admin-card">
 <h3><span class="card-icon">⚙️</span> 系統設定</h3>
+
+<div class="control-group system-toggle-group">
+    <label for="public-toggle">對外開放前台</label>
+    <input type="checkbox" id="public-toggle">
+</div>
 <div class="reset-zone">
 <div class="control-group button-row">
 <button id="resetNumber" type="button" class="btn-reset-single">重置號碼</button>
