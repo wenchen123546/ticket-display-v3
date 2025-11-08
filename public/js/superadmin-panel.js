@@ -1,4 +1,4 @@
-// public/js/superadmin-panel.js (v3.11 修改版)
+// public/js/superadmin-panel.js (v3.18 - 對應 v=19)
  
 document.addEventListener("DOMContentLoaded", () => {
     const userString = sessionStorage.getItem("currentUser");
@@ -17,7 +17,7 @@ document.addEventListener("DOMContentLoaded", () => {
  
     let currentUser = null;
  
-    // --- 1. 驗證與 API 請求 (不變) ---
+    // --- 1. 驗證與 API 請求 ---
     if (!userString) {
         alert("您尚未登入或登入已逾時。");
         window.location.href = "/login.html"; 
@@ -71,7 +71,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return data;
     };
  
-    // --- 2. 載入用戶列表 (v3.7, 不變) ---
+    // --- 2. 載入用戶列表 ---
     const renderUserList = (users) => {
         if (!userListBody) return;
         userListBody.innerHTML = ""; 
@@ -154,15 +154,13 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
  
-    // --- 3. 刪除/修改用戶 (v3.11 修改) ---
+    // --- 3. 刪除/修改用戶 ---
     const showPasswordUI = (cell, username) => {
         const originalButton = cell.innerHTML;
         cell.innerHTML = "";
         const input = document.createElement("input");
         input.type = "password";
         input.className = "password-input";
-        
-        // 【v3.11 修改】 移除 (至少 8 字元) 提示
         input.placeholder = "新密碼";
         
         const saveBtn = document.createElement("button");
@@ -176,16 +174,7 @@ document.addEventListener("DOMContentLoaded", () => {
         
         saveBtn.onclick = () => {
             const newPassword = input.value;
-            
-            // 【v3.11 移除】 密碼長度 8 字元檢查
-            /*
-            if (newPassword.trim().length < 8) {
-                alert("密碼長度至少需要 8 個字元。");
-                return;
-            }
-            */
            
-            // v3.11 新增：檢查是否為空
             if (newPassword.trim().length === 0) {
                  alert("密碼不可為空白。");
                  return;
@@ -251,7 +240,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
  
-    // --- 4. 建立用戶 (v3.11 修改) ---
+    // --- 4. 建立用戶 ---
     const createUserInput = () => {
         const username = newUsernameInput.value.trim().toLowerCase();
         const password = newPasswordInput.value.trim();
@@ -261,14 +250,6 @@ document.addEventListener("DOMContentLoaded", () => {
             createError.textContent = "所有欄位皆為必填。";
             return;
         }
-        
-        // 【v3.11 移除】 密碼長度 8 字元檢查
-        /*
-        if (password.length < 8) {
-            createError.textContent = "密碼長度至少需要 8 個字元。";
-            return;
-        }
-        */
         
         const usernameRegex = /^[a-zA-Z0-9_\u4e00-\u9fa5]+$/;
         if (!usernameRegex.test(username)) {
