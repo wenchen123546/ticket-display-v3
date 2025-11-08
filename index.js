@@ -2,12 +2,10 @@
  * ==========================================
  * 伺服器 (index.js)
  * ... (舊註解) ...
- * * 12. 【v2.1 修正】
- * * - 修正 bcrypt 儲存 (password -> passwordHash)
- * * - 修正 bcrypt 讀取 (user.password -> user.passwordHash)
- * * - 增加啟動時自動修復超級管理員帳號的功能
  * * 13. 【v2.2 功能】
  * * - 新增「超級管理員修改用戶密碼」的 API
+ * * 14. 【v2.3 需求】
+ * * - 移除 update-password API 的 8 字元密碼長度限制
  * ==========================================
  */
 
@@ -224,7 +222,7 @@ const superAdminAPIs = [
     "/api/admin/users/list",
     "/api/admin/users/create",
     "/api/admin/users/delete",
-    "/api/admin/users/update-password" // 【v2.2 新增】
+    "/api/admin/users/update-password"
 ];
 app.use(superAdminAPIs, apiLimiter, jwtAuthMiddleware, superAdminCheckMiddleware);
 
@@ -474,25 +472,29 @@ app.post("/api/admin/users/create", async (req, res) => {
         if (role !== 'admin' && role !== 'superadmin') {
             return res.status(400).json({ error: "無效的角色。" });
         }
-
-        const lowerUsername = username.toLowerCase();
         
-        if (await redis.hexists(KEY_USERS_HASH, lowerUsername)) {
+        // 【v2.3 修正】 允許中文，不再使用 .toLowerCase()
+        const targetUsername = username.trim();
+        if (targetUsername.length === 0) {
+             return res.status(400).json({ error: "帳號不可為空白。" });
+        }
+
+        if (await redis.hexists(KEY_USERS_HASH, targetUsername)) {
             return res.status(409).json({ error: "此帳號名稱已存在。" });
         }
 
         const passwordHash = await bcrypt.hash(password, 10);
         
         const newUser = {
-            username: lowerUsername,
+            username: targetUsername,
             passwordHash: passwordHash, 
             role
         };
         
-        await redis.hset(KEY_USERS_HASH, lowerUsername, JSON.stringify(newUser));
-        await addAdminLog(`建立了新用戶: ${lowerUsername} (${role})`, req.user.username); 
+        await redis.hset(KEY_USERS_HASH, targetUsername, JSON.stringify(newUser));
+        await addAdminLog(`建立了新用戶: ${targetUsername} (${role})`, req.user.username); 
         
-        res.status(201).json({ success: true, user: { username: lowerUsername, role } });
+        res.status(201).json({ success: true, user: { username: targetUsername, role } });
 
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -502,18 +504,18 @@ app.post("/api/admin/users/create", async (req, res) => {
 app.post("/api/admin/users/delete", async (req, res) => {
     try {
         const { username } = req.body;
-        const lowerUsername = username.toLowerCase();
+        const targetUsername = username; // 【v2.3 修正】 不再 .toLowerCase()
 
-        if (lowerUsername === req.user.username) {
+        if (targetUsername === req.user.username) {
             return res.status(400).json({ error: "無法刪除您自己的帳號。" });
         }
         
-        const result = await redis.hdel(KEY_USERS_HASH, lowerUsername);
+        const result = await redis.hdel(KEY_USERS_HASH, targetUsername);
         if (result === 0) {
             return res.status(404).json({ error: "找不到該用戶。" });
         }
 
-        await addAdminLog(`刪除了用戶: ${lowerUsername}`, req.user.username); 
+        await addAdminLog(`刪除了用戶: ${targetUsername}`, req.user.username); 
         res.json({ success: true, message: "用戶已刪除。" });
 
     } catch (e) {
@@ -521,42 +523,35 @@ app.post("/api/admin/users/delete", async (req, res) => {
     }
 });
 
-// --- 【v2.2 新增】 修改密碼 API ---
 app.post("/api/admin/users/update-password", async (req, res) => {
     try {
         const { username, newPassword } = req.body;
         if (!username || !newPassword) {
             return res.status(400).json({ error: "帳號和新密碼為必填。" });
         }
-        if (newPassword.length < 8) {
-             return res.status(400).json({ error: "新密碼長度至少需 8 個字元。" });
-        }
-
-        const lowerUsername = username.toLowerCase();
         
-        // 1. 檢查用戶是否存在
-        const userJSON = await redis.hget(KEY_USERS_HASH, lowerUsername);
+        // 【v2.3 修正】 移除 8 字元限制
+        // if (newPassword.length < 8) { ... }
+
+        const targetUsername = username; // 【v2.3 修正】 不再 .toLowerCase()
+        
+        const userJSON = await redis.hget(KEY_USERS_HASH, targetUsername);
         if (!userJSON) {
             return res.status(404).json({ error: "找不到該用戶。" });
         }
 
         const user = JSON.parse(userJSON);
-
-        // 2. 雜湊新密碼
         const passwordHash = await bcrypt.hash(newPassword, 10);
         
-        // 3. 更新用戶物件
         const updatedUser = {
             ...user,
-            passwordHash: passwordHash // 更新雜湊
+            passwordHash: passwordHash 
         };
         
-        // 4. 存回 Redis
-        await redis.hset(KEY_USERS_HASH, lowerUsername, JSON.stringify(updatedUser));
+        await redis.hset(KEY_USERS_HASH, targetUsername, JSON.stringify(updatedUser));
+        await addAdminLog(`重設了用戶 ${targetUsername} 的密碼`, req.user.username); 
         
-        await addAdminLog(`重設了用戶 ${lowerUsername} 的密碼`, req.user.username); 
-        
-        res.json({ success: true, message: `用戶 ${lowerUsername} 的密碼已更新。` });
+        res.json({ success: true, message: `用戶 ${targetUsername} 的密碼已更新。` });
 
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -640,11 +635,11 @@ io.on("connection", async (socket) => {
 
 async function createSuperAdminOnStartup() {
     try {
-        const username = SUPER_ADMIN_USERNAME.toLowerCase();
+        // 【v2.3 修正】 允許中文，不再 .toLowerCase()
+        const username = SUPER_ADMIN_USERNAME.trim();
         const userJSON = await redis.hget(KEY_USERS_HASH, username);
 
         if (!userJSON) {
-            // 1. 用戶不存在 -> 建立新用戶
             console.log(`... 找不到超級管理員 "${username}"，正在自動建立...`);
             const passwordHash = await bcrypt.hash(SUPER_ADMIN_PASSWORD, 10);
             const superAdmin = {
@@ -656,9 +651,7 @@ async function createSuperAdminOnStartup() {
             console.log(`✅ 超級管理員 "${username}" 已成功建立！`);
         
         } else {
-            // 2. 用戶存在 -> 檢查是否為舊的 (不安全) 格式
             const user = JSON.parse(userJSON);
-            // 【v2.1 修正】 檢查 passwordHash 是否存在
             if (!user.passwordHash) {
                 console.warn(`... 偵測到舊的 (不安全) 超級管理員帳號，正在強制更新密碼...`);
                 const passwordHash = await bcrypt.hash(SUPER_ADMIN_PASSWORD, 10);
