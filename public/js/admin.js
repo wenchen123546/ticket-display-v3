@@ -1,4 +1,4 @@
-// public/js/admin.js (v3.4 修改版)
+// public/js/admin.js (v3.8 修改版)
 
 // --- 1. 元素節點 (DOM) ---
 const adminPanel = document.getElementById("admin-panel");
@@ -21,6 +21,8 @@ const saveLayoutBtn = document.getElementById("save-layout-btn");
 const toggleLayoutLockBtn = document.getElementById("toggle-layout-lock-btn"); 
 const superAdminLink = document.getElementById("superadmin-link");
 const logoutButton = document.getElementById("logout-button"); 
+const onlineAdminList = document.getElementById("online-admin-list"); // 【v3.8】 新增
+const onlineAdminCount = document.getElementById("online-admin-count"); // 【v3.8】 新增
 
 // --- 2. 全域變數 ---
 let resetAllTimer = null;
@@ -123,7 +125,7 @@ function showToast(message, type = 'info') {
     }, 3000);
 }
  
-// --- 6. 控制台 Socket 監聽器 (不變) ---
+// --- 6. 控制台 Socket 監聽器 ---
 socket.on("connect", () => {
     console.log("Socket.io 已連接 (v3.0 Cookie Auth)");
     statusBar.classList.remove("visible");
@@ -170,6 +172,12 @@ socket.on("updateFeaturedContents", (contents) => { renderFeaturedListUI(content
 socket.on("updateSoundSetting", (isEnabled) => { soundToggle.checked = isEnabled; });
 socket.on("updatePublicStatus", (isPublic) => { publicToggle.checked = isPublic; });
 socket.on("updateTimestamp", (timestamp) => { console.log("Timestamp updated:", timestamp); });
+
+// 【v3.8】 新增在線列表監聽
+socket.on("updateOnlineList", (admins) => {
+    renderOnlineList(admins);
+});
+
  
 // --- 7. API 請求函式 (不變) ---
 async function apiRequest(endpoint, body = {}, a_returnResponse = false) {
@@ -212,7 +220,7 @@ async function apiRequest(endpoint, body = {}, a_returnResponse = false) {
     }
 }
  
-// --- 8. GUI 渲染函式 (不變) ---
+// --- 8. GUI 渲染函式 ---
 function renderPassedListUI(numbers) {
     passedListUI.innerHTML = ""; 
     if (!Array.isArray(numbers)) return;
@@ -268,26 +276,62 @@ function renderFeaturedListUI(contents) {
     });
     featuredListUI.appendChild(fragment);
 }
- 
-// --- 9. 控制台按鈕功能 ---
 
-// 【v3.4 修改】 移除 500ms 延遲
+// 【v3.8】 新增在線列表渲染
+function renderOnlineList(admins) { // admins 是 [{username, role}]
+    if (!onlineAdminList || !onlineAdminCount) return;
+    
+    onlineAdminList.innerHTML = ""; // 清空
+    onlineAdminCount.textContent = admins.length;
+
+    if (admins.length === 0) {
+        onlineAdminList.innerHTML = '<li class="empty-state">目前沒有管理員在線</li>';
+        return;
+    }
+    
+    const fragment = document.createDocumentFragment();
+    const selfUsername = currentUser?.username; 
+    
+    // 排序：自己最前，然後按字母
+    admins.sort((a, b) => {
+        if (a.username === selfUsername) return -1;
+        if (b.username === selfUsername) return 1;
+        return a.username.localeCompare(b.username);
+    });
+
+    admins.forEach(user => {
+        const li = document.createElement("li");
+        const roleSpan = document.createElement("span");
+        
+        // 根據角色添加 class 以便 CSS 上色
+        roleSpan.className = `role-${user.role}`; 
+        roleSpan.textContent = `[${user.role}]`;
+        
+        li.appendChild(roleSpan);
+        li.appendChild(document.createTextNode(` ${user.username} `));
+        
+        if (user.username === selfUsername) {
+            li.innerHTML += " (您)";
+            li.style.fontWeight = "bold";
+        }
+        fragment.appendChild(li);
+    });
+    onlineAdminList.appendChild(fragment);
+}
+
+ 
+// --- 9. 控制台按鈕功能 (v3.4, 不變) ---
 async function changeNumber(direction) {
-    if (isChangingNumber) return; // 如果正在請求，則忽略此次點擊
-    
+    if (isChangingNumber) return; 
     isChangingNumber = true;
-    
     try {
         await apiRequest("/api/number/change", { direction });
     } catch (e) {
         console.error("changeNumber 失敗:", e);
     } finally {
-        // 請求完成後，立刻解除鎖定
         isChangingNumber = false; 
     }
 }
-
-// ... (setNumber, resetNumber, etc. 不變) ...
 async function setNumber() {
     const num = document.getElementById("manualNumber").value;
     if (num === "") return;
@@ -417,7 +461,7 @@ soundToggle.addEventListener("change", () => {
 publicToggle.addEventListener("change", () => {
     const isPublic = publicToggle.checked;
     if (!isPublic) {
-        if (!confirm("確定要關閉前台嗎？\n所有使用者將會看到「維護中」畫面。")) {
+        if (!confirm("確定要關閉前台嗎？\n所有使用者將會看到「維H護中」畫面。")) {
             publicToggle.checked = true; 
             return;
         }
