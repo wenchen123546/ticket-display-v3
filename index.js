@@ -2,8 +2,11 @@
  * ==========================================
  * 伺服器 (index.js)
  * ... (舊註解) ...
- * * 5. 【新功能】 增加 KEY_IS_PUBLIC 鍵，實現「維護模式」
  * * 6. 【新功能】 增加 GridStack 儀表板排版儲存/讀取 API
+ * * 7. 【安全修復】 
+ * * - 實作 express-rate-limit 防止暴力破解
+ * * - 實作 helmet 增加 HTTP 安全標頭
+ * * - 統一 API 驗證中間件
  * ==========================================
  */
 
@@ -12,6 +15,8 @@ const express = require("express");
 const http = require("http");
 const socketio = require("socket.io");
 const Redis = require("ioredis");
+const helmet = require('helmet'); // 【安全】 載入 helmet
+const rateLimit = require('express-rate-limit'); // 【安全】 載入 rate-limit
 
 // --- 2. 伺服器實體化 ---
 const app = express();
@@ -42,7 +47,6 @@ const redis = new Redis(REDIS_URL, {
 redis.on('connect', () => { console.log("✅ 成功連線到 Upstash Redis 資料庫。"); });
 redis.on('error', (err) => { console.error("❌ Redis 連線錯誤:", err); process.exit(1); });
 
-// --- 【1.B 改善】定義一個原子操作的 Lua 腳本 ---
 redis.defineCommand("decrIfPositive", {
     numberOfKeys: 1,
     lua: `
@@ -63,12 +67,32 @@ const KEY_FEATURED_CONTENTS = 'callsys:featured';
 const KEY_LAST_UPDATED = 'callsys:updated';
 const KEY_SOUND_ENABLED = 'callsys:soundEnabled';
 const KEY_IS_PUBLIC = 'callsys:isPublic'; 
-const KEY_ADMIN_LAYOUT = 'callsys:admin-layout'; // 【新功能】 儲存排版
+const KEY_ADMIN_LAYOUT = 'callsys:admin-layout'; 
 
 // --- 7. Express 中介軟體 (Middleware) ---
+app.use(helmet()); // 【安全】 自動加入安全標頭
 app.use(express.static("public"));
 app.use(express.json());
 
+// 【安全】 設定一個「通用」的速率限制 (防止 DoS 攻擊)
+const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 分鐘
+    max: 1000, // 限制每個 IP 在 15 分鐘內最多 1000 次請求
+    message: { error: "請求過於頻繁，請稍後再試。" },
+    standardHeaders: true, // 回傳速率限制的標頭
+    legacyHeaders: false, // 關閉舊的 X-RateLimit-* 標頭
+});
+
+// 【安全】 設定一個「嚴格」的登入速率限制 (防止暴力破解)
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 分鐘
+    max: 10, // 限制每個 IP 在 15 分鐘內最多 10 次登入嘗試
+    message: { error: "登入嘗試次數過多，請 15 分鐘後再試。" },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+// 驗證中介軟體 (保持不變)
 const authMiddleware = (req, res, next) => {
     const { token } = req.body;
     if (token !== ADMIN_TOKEN) {
@@ -83,8 +107,6 @@ async function updateTimestamp() {
     await redis.set(KEY_LAST_UPDATED, now);
     io.emit("updateTimestamp", now);
 }
-
-// --- 8.5 輔助廣播函式 (用於即時更新) ---
 async function broadcastPassedNumbers() {
     try {
         const numbersRaw = await redis.zrange(KEY_PASSED_NUMBERS, 0, -1);
@@ -107,9 +129,25 @@ async function broadcastFeaturedContents() {
 }
 
 // --- 9. API 路由 (Routes) ---
-app.post("/check-token", authMiddleware, (req, res) => { res.json({ success: true }); });
 
-app.post("/change-number", authMiddleware, async (req, res) => {
+// 【安全】 登入 API：套用「嚴格」限制和驗證
+app.post("/check-token", loginLimiter, authMiddleware, (req, res) => { res.json({ success: true }); });
+
+// 【安全】 統一宣告所有受保護的 API
+const protectedAPIs = [
+    "/change-number", "/set-number",
+    "/api/passed/add", "/api/passed/remove", "/api/passed/clear",
+    "/api/featured/add", "/api/featured/remove", "/api/featured/clear",
+    "/set-sound-enabled", "/set-public-status", "/reset",
+    "/api/layout/load", "/api/layout/save"
+];
+// 【安全】 統一套用「通用」限制和「驗證」
+app.use(protectedAPIs, apiLimiter, authMiddleware);
+
+
+// --- 【重要】 以下所有路由「不再需要」單獨傳入 authMiddleware ---
+
+app.post("/change-number", async (req, res) => {
     try {
         const { direction } = req.body;
         let num;
@@ -131,7 +169,7 @@ app.post("/change-number", authMiddleware, async (req, res) => {
     }
 });
 
-app.post("/set-number", authMiddleware, async (req, res) => {
+app.post("/set-number", async (req, res) => {
     try {
         const { number } = req.body;
         const num = Number(number);
@@ -148,8 +186,7 @@ app.post("/set-number", authMiddleware, async (req, res) => {
     }
 });
 
-// --- 過號列表 (Passed Numbers) 即時 API ---
-app.post("/api/passed/add", authMiddleware, async (req, res) => {
+app.post("/api/passed/add", async (req, res) => {
     try {
         const { number } = req.body;
         const num = Number(number);
@@ -162,7 +199,7 @@ app.post("/api/passed/add", authMiddleware, async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post("/api/passed/remove", authMiddleware, async (req, res) => {
+app.post("/api/passed/remove", async (req, res) => {
     try {
         const { number } = req.body;
         await redis.zrem(KEY_PASSED_NUMBERS, number);
@@ -171,9 +208,7 @@ app.post("/api/passed/remove", authMiddleware, async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-
-// --- 精選連結 (Featured Contents) 即時 API ---
-app.post("/api/featured/add", authMiddleware, async (req, res) => {
+app.post("/api/featured/add", async (req, res) => {
     try {
         const { linkText, linkUrl } = req.body;
         if (!linkText || !linkUrl) {
@@ -189,7 +224,7 @@ app.post("/api/featured/add", authMiddleware, async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post("/api/featured/remove", authMiddleware, async (req, res) => {
+app.post("/api/featured/remove", async (req, res) => {
     try {
         const { linkText, linkUrl } = req.body;
         if (!linkText || !linkUrl) {
@@ -202,9 +237,7 @@ app.post("/api/featured/remove", authMiddleware, async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-
-// --- 【2.A 功能補強】 單獨清空 API ---
-app.post("/api/passed/clear", authMiddleware, async (req, res) => {
+app.post("/api/passed/clear", async (req, res) => {
     try {
         await redis.del(KEY_PASSED_NUMBERS);
         io.emit("updatePassed", []);
@@ -213,7 +246,7 @@ app.post("/api/passed/clear", authMiddleware, async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post("/api/featured/clear", authMiddleware, async (req, res) => {
+app.post("/api/featured/clear", async (req, res) => {
     try {
         await redis.del(KEY_FEATURED_CONTENTS);
         io.emit("updateFeaturedContents", []);
@@ -222,10 +255,7 @@ app.post("/api/featured/clear", authMiddleware, async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ---
-
-
-app.post("/set-sound-enabled", authMiddleware, async (req, res) => {
+app.post("/set-sound-enabled", async (req, res) => {
     try {
         const { enabled } = req.body;
         const valueToSet = enabled ? "1" : "0";
@@ -239,7 +269,7 @@ app.post("/set-sound-enabled", authMiddleware, async (req, res) => {
     }
 });
 
-app.post("/set-public-status", authMiddleware, async (req, res) => {
+app.post("/set-public-status", async (req, res) => {
     try {
         const { isPublic } = req.body;
         const valueToSet = isPublic ? "1" : "0";
@@ -253,8 +283,7 @@ app.post("/set-public-status", authMiddleware, async (req, res) => {
     }
 });
 
-
-app.post("/reset", authMiddleware, async (req, res) => {
+app.post("/reset", async (req, res) => {
     try {
         const multi = redis.multi();
         multi.set(KEY_CURRENT_NUMBER, 0);
@@ -262,7 +291,7 @@ app.post("/reset", authMiddleware, async (req, res) => {
         multi.del(KEY_FEATURED_CONTENTS);
         multi.set(KEY_SOUND_ENABLED, "1");
         multi.set(KEY_IS_PUBLIC, "1"); 
-        multi.del(KEY_ADMIN_LAYOUT); // 【新功能】 重置時清空排版
+        multi.del(KEY_ADMIN_LAYOUT); 
         await multi.exec();
 
         io.emit("update", 0);
@@ -339,18 +368,13 @@ io.on("connection", async (socket) => {
 });
 
 // --- 11. 【新功能】 儀表板排版 API ---
-
-/**
- * 讀取儲存的排版
- * 我們使用 POST 是為了方便傳遞 token 進行驗證
- */
-app.post("/api/layout/load", authMiddleware, async (req, res) => {
+// (這些路由已在上面的 protectedAPIs 陣列中被保護)
+app.post("/api/layout/load", async (req, res) => {
     try {
         const layoutJSON = await redis.get(KEY_ADMIN_LAYOUT);
         if (layoutJSON) {
             res.json({ success: true, layout: JSON.parse(layoutJSON) });
         } else {
-            // 找不到排版 (例如第一次登入)
             res.json({ success: true, layout: null });
         }
     } catch (e) {
@@ -358,10 +382,7 @@ app.post("/api/layout/load", authMiddleware, async (req, res) => {
     }
 });
 
-/**
- * 儲存新的排版
- */
-app.post("/api/layout/save", authMiddleware, async (req, res) => {
+app.post("/api/layout/save", async (req, res) => {
     try {
         const { layout } = req.body;
         if (!layout || !Array.isArray(layout)) {
