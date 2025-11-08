@@ -1,7 +1,6 @@
-// public/js/admin.js (v3.15 修改版)
+// public/js/admin.js (v3.15 / v3.16)
 
 // --- 1. 元素節點 (DOM) ---
-// ... (與 v3.14 相同)
 const adminPanel = document.getElementById("admin-panel");
 const numberEl = document.getElementById("number");
 const statusBar = document.getElementById("status-bar");
@@ -25,7 +24,7 @@ const logoutButton = document.getElementById("logout-button");
 const onlineAdminList = document.getElementById("online-admin-list");
 const onlineAdminCount = document.getElementById("online-admin-count");
 
-// --- 2. 全域變數 (不變) ---
+// --- 2. 全域變數 ---
 let resetAllTimer = null;
 let grid = null; 
 let toastTimer = null; 
@@ -33,12 +32,12 @@ let currentUser = null;
 let isLayoutLocked = true;
 let isChangingNumber = false; 
 
-// --- 3. Socket.io (不變) ---
+// --- 3. Socket.io ---
 const socket = io({ 
     autoConnect: false
 });
  
-// --- 4. 登入/顯示邏輯 (不變) ---
+// --- 4. 登入/顯示邏輯 ---
 document.addEventListener("DOMContentLoaded", () => {
     const userString = sessionStorage.getItem("currentUser");
  
@@ -120,7 +119,7 @@ async function showPanel() {
     }
 }
  
-// --- 5. Toast 通知函式 (不變) ---
+// --- 5. Toast 通知函式 ---
 function showToast(message, type = 'info') {
     const toast = document.getElementById("toast-notification");
     if (!toast) return;
@@ -133,7 +132,7 @@ function showToast(message, type = 'info') {
     }, 3000);
 }
  
-// --- 6. 控制台 Socket 監聽器 (不變) ---
+// --- 6. 控制台 Socket 監聽器 ---
 socket.on("connect", () => {
     console.log("Socket.io 已連接 (v3.0 Cookie Auth)");
     statusBar.classList.remove("visible");
@@ -185,7 +184,7 @@ socket.on("updateOnlineList", (admins) => {
 });
 
  
-// --- 7. API 請求函式 (不變) ---
+// --- 7. API 請求函式 ---
 async function apiRequest(endpoint, body = {}, a_returnResponse = false) {
     try {
         const res = await fetch(endpoint, {
@@ -226,7 +225,7 @@ async function apiRequest(endpoint, body = {}, a_returnResponse = false) {
     }
 }
  
-// --- 8. GUI 渲染函式 (不變) ---
+// --- 8. GUI 渲染函式 ---
 function renderPassedListUI(numbers) {
     passedListUI.innerHTML = ""; 
     if (!Array.isArray(numbers)) return;
@@ -322,7 +321,7 @@ function renderOnlineList(admins) {
 }
 
  
-// --- 9. 控制台按鈕功能 (不變) ---
+// --- 9. 控制台按鈕功能 ---
 async function changeNumber(direction) {
     if (isChangingNumber) return; 
     isChangingNumber = true;
@@ -396,7 +395,7 @@ async function clearAdminLog() {
     }
 }
  
-// --- 10. 綁定按鈕事件 (v3.12, 不變) ---
+// --- 10. 綁定按鈕事件 ---
 document.getElementById("next").onclick = () => changeNumber("next");
 document.getElementById("prev").onclick = () => changeNumber("prev");
 document.getElementById("setNumber").onclick = setNumber;
@@ -450,12 +449,12 @@ addFeaturedBtn.onclick = async () => {
     addFeaturedBtn.disabled = false;
 };
  
-// --- 11. 綁定 Enter 鍵 (不變) ---
+// --- 11. 綁定 Enter 鍵 ---
 newPassedNumberInput.addEventListener("keyup", (event) => { if (event.key === "Enter") { addPassedBtn.click(); } });
 newLinkTextInput.addEventListener("keyup", (event) => { if (event.key === "Enter") { newLinkUrlInput.focus(); } });
 newLinkUrlInput.addEventListener("keyup", (event) => { if (event.key === "Enter") { addFeaturedBtn.click(); } });
  
-// --- 12. 綁定開關 (不變) ---
+// --- 12. 綁定開關 ---
 soundToggle.addEventListener("change", () => {
     const isEnabled = soundToggle.checked;
     apiRequest("/api/settings/sound", { enabled: isEnabled });
@@ -471,7 +470,7 @@ publicToggle.addEventListener("change", () => {
     apiRequest("/api/settings/public", { isPublic: isPublic });
 });
  
-// --- 13. 綁定 GridStack 控制按鈕 (不變) ---
+// --- 13. 綁定 GridStack 控制按鈕 ---
 if (saveLayoutBtn) {
     saveLayoutBtn.addEventListener("click", async () => {
         if (!grid) return;
