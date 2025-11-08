@@ -1,6 +1,7 @@
-// public/js/admin.js (v3.8 修改版)
+// public/js/admin.js (v3.9 修改版)
 
 // --- 1. 元素節點 (DOM) ---
+// ... (與 v3.8 相同)
 const adminPanel = document.getElementById("admin-panel");
 const numberEl = document.getElementById("number");
 const statusBar = document.getElementById("status-bar");
@@ -21,10 +22,10 @@ const saveLayoutBtn = document.getElementById("save-layout-btn");
 const toggleLayoutLockBtn = document.getElementById("toggle-layout-lock-btn"); 
 const superAdminLink = document.getElementById("superadmin-link");
 const logoutButton = document.getElementById("logout-button"); 
-const onlineAdminList = document.getElementById("online-admin-list"); // 【v3.8】 新增
-const onlineAdminCount = document.getElementById("online-admin-count"); // 【v3.8】 新增
+const onlineAdminList = document.getElementById("online-admin-list");
+const onlineAdminCount = document.getElementById("online-admin-count");
 
-// --- 2. 全域變數 ---
+// --- 2. 全域變數 (不變) ---
 let resetAllTimer = null;
 let grid = null; 
 let toastTimer = null; 
@@ -37,7 +38,7 @@ const socket = io({
     autoConnect: false
 });
  
-// --- 4. 登入/顯示邏輯 (v3.1, 不變) ---
+// --- 4. 登入/顯示邏輯 (不變) ---
 document.addEventListener("DOMContentLoaded", () => {
     const userString = sessionStorage.getItem("currentUser");
  
@@ -61,7 +62,7 @@ document.addEventListener("DOMContentLoaded", () => {
     showPanel();
 });
  
-// --- showPanel (v3.1, 不變) ---
+// --- showPanel (v3.9 修改 GridStack.init) ---
 async function showPanel() {
     adminPanel.style.display = "block";
     document.title = "後台管理 - 控制台";
@@ -104,6 +105,12 @@ async function showPanel() {
             alwaysShowResizeHandle: 'mobile',
             disableDrag: true,
             disableResize: true,
+            
+            // --- 【v3.9 RWD 修復】 ---
+            // 新增此選項，告訴 GridStack 何時切換到單欄模式
+            oneColumnMode: 'auto',
+            oneColumnModeBreakpoint: 768 // 必須匹配 CSS 中的 768px
+            // ---
         });
         
         if (savedLayout) {
@@ -125,7 +132,7 @@ function showToast(message, type = 'info') {
     }, 3000);
 }
  
-// --- 6. 控制台 Socket 監聽器 ---
+// --- 6. 控制台 Socket 監聽器 (v3.8, 不變) ---
 socket.on("connect", () => {
     console.log("Socket.io 已連接 (v3.0 Cookie Auth)");
     statusBar.classList.remove("visible");
@@ -172,8 +179,6 @@ socket.on("updateFeaturedContents", (contents) => { renderFeaturedListUI(content
 socket.on("updateSoundSetting", (isEnabled) => { soundToggle.checked = isEnabled; });
 socket.on("updatePublicStatus", (isPublic) => { publicToggle.checked = isPublic; });
 socket.on("updateTimestamp", (timestamp) => { console.log("Timestamp updated:", timestamp); });
-
-// 【v3.8】 新增在線列表監聽
 socket.on("updateOnlineList", (admins) => {
     renderOnlineList(admins);
 });
@@ -220,7 +225,7 @@ async function apiRequest(endpoint, body = {}, a_returnResponse = false) {
     }
 }
  
-// --- 8. GUI 渲染函式 ---
+// --- 8. GUI 渲染函式 (v3.8, 不變) ---
 function renderPassedListUI(numbers) {
     passedListUI.innerHTML = ""; 
     if (!Array.isArray(numbers)) return;
@@ -276,12 +281,10 @@ function renderFeaturedListUI(contents) {
     });
     featuredListUI.appendChild(fragment);
 }
-
-// 【v3.8】 新增在線列表渲染
-function renderOnlineList(admins) { // admins 是 [{username, role}]
+function renderOnlineList(admins) {
     if (!onlineAdminList || !onlineAdminCount) return;
     
-    onlineAdminList.innerHTML = ""; // 清空
+    onlineAdminList.innerHTML = ""; 
     onlineAdminCount.textContent = admins.length;
 
     if (admins.length === 0) {
@@ -292,7 +295,6 @@ function renderOnlineList(admins) { // admins 是 [{username, role}]
     const fragment = document.createDocumentFragment();
     const selfUsername = currentUser?.username; 
     
-    // 排序：自己最前，然後按字母
     admins.sort((a, b) => {
         if (a.username === selfUsername) return -1;
         if (b.username === selfUsername) return 1;
@@ -303,7 +305,6 @@ function renderOnlineList(admins) { // admins 是 [{username, role}]
         const li = document.createElement("li");
         const roleSpan = document.createElement("span");
         
-        // 根據角色添加 class 以便 CSS 上色
         roleSpan.className = `role-${user.role}`; 
         roleSpan.textContent = `[${user.role}]`;
         
@@ -461,7 +462,7 @@ soundToggle.addEventListener("change", () => {
 publicToggle.addEventListener("change", () => {
     const isPublic = publicToggle.checked;
     if (!isPublic) {
-        if (!confirm("確定要關閉前台嗎？\n所有使用者將會看到「維H護中」畫面。")) {
+        if (!confirm("確定要關閉前台嗎？\n所有使用者將會看到「維護中」畫面。")) {
             publicToggle.checked = true; 
             return;
         }
