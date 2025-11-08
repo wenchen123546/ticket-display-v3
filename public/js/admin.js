@@ -1,4 +1,4 @@
-// public/js/admin.js (v3.15 / v3.17)
+// public/js/admin.js (v3.17 RWD 最終修復)
 
 // --- 1. 元素節點 (DOM) ---
 const adminPanel = document.getElementById("admin-panel");
@@ -61,13 +61,13 @@ document.addEventListener("DOMContentLoaded", () => {
     showPanel();
 });
  
-// --- showPanel (v3.15 RWD 最終修復) ---
+// --- showPanel (v3.17 RWD 最終修復) ---
 async function showPanel() {
     adminPanel.style.display = "block";
     document.title = "後台管理 - 控制台";
     socket.connect(); 
  
-    // 【v3.15 修復】 立即初始化 GridStack，移除 setTimeout
+    // 立即初始化 GridStack (v3.15 修復)
     grid = GridStack.init({
         column: 12, 
         cellHeight: 'auto', 
@@ -78,11 +78,8 @@ async function showPanel() {
         alwaysShowResizeHandle: 'mobile',
         disableDrag: true,
         disableResize: true,
-        
-        // --- RWD 關鍵設定 ---
-        oneColumnMode: 'auto',
-        oneColumnModeBreakpoint: 768 
-        // ---
+        oneColumnMode: 'auto', // RWD 關鍵
+        oneColumnModeBreakpoint: 768 // RWD 關鍵
     });
 
     // (權限按鈕)
@@ -113,10 +110,12 @@ async function showPanel() {
         showToast(`❌ 讀取排版失敗: ${e.message}`, "error");
     }
  
-    // 【v3.15 修復】 移除 setTimeout, 移到 GridStack.init 之後
-    if (savedLayout) {
+    // --- 【v3.17 RWD 最終修復】 ---
+    // 只有在桌機版 (寬度 > 768) 且有儲存排版時，才載入
+    if (savedLayout && window.innerWidth > 768) {
         grid.load(savedLayout);
     }
+    // ---
 }
  
 // --- 5. Toast 通知函式 ---
