@@ -82,7 +82,7 @@ body {
 /* --- 2. 【GridStack】 卡片佈局 --- */
 
 #admin-panel { 
-    display: none; 
+    /* (display:none; 已由 admin.html 的 style 屬性控制) */
     padding-top: 0; 
     max-width: 1200px; 
     margin: 0 auto; 
@@ -90,6 +90,9 @@ body {
 #admin-panel h1 { font-size: 3rem; color: var(--color-danger); margin-bottom: 30px; }
 #number { font-size: 5rem; color: var(--color-primary); margin: 20px 0; }
 
+/* 【修改】 移除 .admin-grid 和 .grid-column */
+
+/* 【新】 GridStack 核心樣式 */
 .grid-stack-item-content {
     background: var(--color-bg-light);
     border-radius: 10px;
@@ -97,10 +100,12 @@ body {
 }
 
 .grid-stack-item-content .admin-card {
+    /* 【重要】 讓卡片填滿 GridStack 的 content 區塊 */
     padding: 20px;
     text-align: left; 
-    height: 100%; 
-    box-sizing: border-box; 
+    height: 100%; /* 填滿高度 */
+    box-sizing: border-box; /* 確保 padding 不會撐爆 */
+    /* 【重要】 讓日誌區塊可以自動填滿剩餘空間 */
     display: flex;
     flex-direction: column; 
 }
@@ -115,6 +120,7 @@ body {
     border-bottom: 1px solid #eee;
     padding-bottom: 10px;
     font-weight: bold;
+    /* 【新】 讓標題成為可拖移的手柄 */
     cursor: move !important;
 }
 .admin-card h3 .card-icon {
@@ -159,19 +165,22 @@ button {
     cursor: pointer; 
     color: white; 
     min-width: 120px; 
+    /* 【修改】 寬度改回 100%，由父層 (control-group) 控制 */
     width: 100%; 
     box-sizing: border-box;
 }
 button:disabled { background-color: #999; cursor: not-allowed; opacity: 0.7; }
+/* 【修改】 讓並排按鈕自動適應寬度 */
 .control-group.button-row button { 
     width: auto; 
     min-width: 120px; 
-    flex-grow: 1; 
+    flex-grow: 1; /* 讓它們填滿空間 */
 }
 
 input, textarea { 
     font-size: 1.2rem; 
     padding: 8px; 
+    /* 【修改】 寬度改回 100% */
     width: 100%; 
     text-align: center; 
     border-radius: 6px; 
@@ -188,7 +197,9 @@ textarea { height: 80px; text-align: left; padding: 10px; }
     border-radius: 8px; 
     padding: 15px; 
     background: #f9f9f9; 
+    /* 【修改】 寬度改回 100% */
     width: 100%;
+    /* (移除 margin: 0 auto) */
     box-sizing: border-box; 
     text-align: center; 
 }
@@ -230,6 +241,7 @@ textarea { height: 80px; text-align: left; padding: 10px; }
     padding: 0; 
     margin: 0; 
     min-width: 30px; 
+    /* 【修改】 讓 + 按鈕恢復原狀 */
     width: 30px !important; 
 }
 .input-group { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; width: 100%; }
@@ -246,6 +258,7 @@ textarea { height: 80px; text-align: left; padding: 10px; }
     margin: 5px; 
     min-width: 40px; 
     flex-shrink: 0; 
+    /* 【修改】 讓 + 按鈕恢復原狀 */
     width: 40px !important; 
 }
 
@@ -276,15 +289,20 @@ textarea { height: 80px; text-align: left; padding: 10px; }
     width: auto; 
 }
 #resetAll { 
-    width: 100%; 
+    width: 100%; /* 讓它填滿 */
 }
 #resetAllConfirm { 
-    width: 100%; 
+    width: 100%; /* 讓它填滿 */
 }
 
 /* --- 7. RWD --- */
 
 @media (max-width: 768px) { 
+    /* 【新】 GridStack 在手機上自動變為單欄 */
+    .grid-stack-one-column-mode {
+        /* 您可以在此處覆蓋手機版樣式 */
+    }
+    
     body { 
         padding: 10px; 
         padding-top: 30px; 
@@ -327,7 +345,7 @@ textarea { height: 80px; text-align: left; padding: 10px; }
     background: #f9f9f9; 
     border: 1px solid var(--color-border); 
     padding: 10px;
-    width: 100%; 
+    width: 100%; /* 【修改】 寬度改回 100% */
     box-sizing: border-box; 
     margin-bottom: 20px; 
 }
@@ -346,9 +364,10 @@ textarea { height: 80px; text-align: left; padding: 10px; }
 
 /* --- 10. 管理員日誌樣式 --- */
 
+/* 【新】 讓日誌區塊可以自動填滿剩餘高度 */
 .admin-log-container { 
     max-width: 100%; 
-    flex-grow: 1; 
+    flex-grow: 1; /* 關鍵：填滿剩餘空間 */
     display: flex;
     flex-direction: column;
 }
@@ -359,7 +378,7 @@ textarea { height: 80px; text-align: left; padding: 10px; }
     margin: 0; 
     width: 100%; 
     height: 150px; 
-    flex-grow: 1; 
+    flex-grow: 1; /* 關鍵：填滿剩餘空間 */
     overflow-y: auto; 
     background: var(--color-log-bg); 
     color: var(--color-log-text); 
@@ -375,12 +394,12 @@ textarea { height: 80px; text-align: left; padding: 10px; }
 /* --- 11. 日誌清除按鈕 --- */
 
 .admin-log-container .btn-clear-log {
-    width: 100%; 
+    width: 100%; /* 【修改】 寬度改回 100% */
     padding: 5px 12px;
     font-size: 0.9rem;
     background-color: var(--color-neutral); 
     margin-top: 10px;
-    flex-shrink: 0; 
+    flex-shrink: 0; /* 防止按鈕在空間不足時縮小 */
 }
 .admin-log-container .btn-clear-log:hover { opacity: 0.9; }
 
