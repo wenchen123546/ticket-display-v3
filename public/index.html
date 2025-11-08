@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>候位號碼顯示</title>
+ 
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#2563eb">
+ 
+    <script src="/socket.io/socket.io.js"></script>
+    <script
+src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link rel="stylesheet" href="/css/style.css?v=15">
+</head>
+<body>
+    
+    <div id="maintenance-overlay">
+         <h1>💉系統維護中🩸</h1>
+         <p>目前暫停服務，請稍後再試。</p>
+    </div>
+    <div id="qr-code-container">
+        <div id="qr-code-placeholder"></div>
+        <p>掃描查看進度</p>
+    </div>
+ 
+    <script src="/js/main.js?v=15"></script>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => {
+                        console.log('✅ Service Worker 註冊成功, 範圍:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.error('❌ Service Worker 註冊失敗:', error);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>
