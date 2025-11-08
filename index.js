@@ -6,8 +6,9 @@
  * * - 實作 express-rate-limit 防止暴力破解
  * * - 實作 helmet 增加 HTTP 安全標頭
  * * - 統一 API 驗證中間件
- * * 8. 【CSP 修正】 
+ * * 8. 【CSP 修正 v2】 
  * * - 修正 helmet 的 CSP 策略，允許載入 GridStack 和 QR Code 的 CDN
+ * * - 新增 connect-src 允許載入 .map (除錯用)
  * ==========================================
  */
 
@@ -72,16 +73,20 @@ const KEY_ADMIN_LAYOUT = 'callsys:admin-layout';
 
 // --- 7. Express 中介軟體 (Middleware) ---
 
-// 【安全修正】 
+// 【安全修正 v2】 
 // 告訴 helmet 我們的內容安全策略 (CSP)
 app.use(helmet({
     contentSecurityPolicy: {
       directives: {
         ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-        // 允許 'self' (我們自己), cdn.jsdelivr.net (GridStack), cdnjs.cloudflare.com (QR Code)
+        // 'self' = 我們自己的網域
+        // cdn.jsdelivr.net = GridStack.js
+        // cdnjs.cloudflare.com = QR Code
         "script-src": ["'self'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
-        // 允許 'self', cdn.jsdelivr.net (GridStack CSS), 和 inline 樣式 (為了 CSS 補丁)
+        // 'self' = admin.css, cdn.jsdelivr.net = gridstack.css, 'unsafe-inline' = HTML中的<style>補丁
         "style-src": ["'self'", "https://cdn.jsdelivr.net", "'unsafe-inline'"],
+        // 【新】 允許瀏覽器(開發者工具)連接到 CDN 載入 .map 除錯檔案
+        "connect-src": ["'self'", "https://cdn.jsdelivr.net"]
       },
     },
 }));
