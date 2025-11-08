@@ -1,7 +1,7 @@
-// public/js/admin.js (v3.12 / v3.14)
-// (此版本包含 v3.9 RWD 修復 和 v3.12 Bug 修復)
+// public/js/admin.js (v3.15 修改版)
 
 // --- 1. 元素節點 (DOM) ---
+// ... (與 v3.14 相同)
 const adminPanel = document.getElementById("admin-panel");
 const numberEl = document.getElementById("number");
 const statusBar = document.getElementById("status-bar");
@@ -25,7 +25,7 @@ const logoutButton = document.getElementById("logout-button");
 const onlineAdminList = document.getElementById("online-admin-list");
 const onlineAdminCount = document.getElementById("online-admin-count");
 
-// --- 2. 全域變數 ---
+// --- 2. 全域變數 (不變) ---
 let resetAllTimer = null;
 let grid = null; 
 let toastTimer = null; 
@@ -33,12 +33,12 @@ let currentUser = null;
 let isLayoutLocked = true;
 let isChangingNumber = false; 
 
-// --- 3. Socket.io ---
+// --- 3. Socket.io (不變) ---
 const socket = io({ 
     autoConnect: false
 });
  
-// --- 4. 登入/顯示邏輯 ---
+// --- 4. 登入/顯示邏輯 (不變) ---
 document.addEventListener("DOMContentLoaded", () => {
     const userString = sessionStorage.getItem("currentUser");
  
@@ -62,12 +62,31 @@ document.addEventListener("DOMContentLoaded", () => {
     showPanel();
 });
  
-// --- showPanel ---
+// --- showPanel (v3.15 RWD 最終修復) ---
 async function showPanel() {
     adminPanel.style.display = "block";
     document.title = "後台管理 - 控制台";
     socket.connect(); 
  
+    // 【v3.15 修復】 立即初始化 GridStack，移除 setTimeout
+    grid = GridStack.init({
+        column: 12, 
+        cellHeight: 'auto', 
+        margin: 10,         
+        minRow: 1,           
+        float: true,       
+        removable: false,   
+        alwaysShowResizeHandle: 'mobile',
+        disableDrag: true,
+        disableResize: true,
+        
+        // --- RWD 關鍵設定 ---
+        oneColumnMode: 'auto',
+        oneColumnModeBreakpoint: 768 
+        // ---
+    });
+
+    // (權限按鈕)
     if (currentUser.role === 'superadmin') {
         if (superAdminLink) superAdminLink.style.display = 'block';
         if (toggleLayoutLockBtn) toggleLayoutLockBtn.style.display = 'block';
@@ -78,6 +97,7 @@ async function showPanel() {
         saveLayoutBtn.disabled = true;
     }
  
+    // (載入排版)
     let savedLayout = null;
     try {
         if (currentUser.role === 'superadmin') {
@@ -94,31 +114,13 @@ async function showPanel() {
         showToast(`❌ 讀取排版失敗: ${e.message}`, "error");
     }
  
-    setTimeout(() => {
-        grid = GridStack.init({
-            column: 12, 
-            cellHeight: 'auto', 
-            margin: 10,         
-            minRow: 1,           
-            float: true,       
-            removable: false,   
-            alwaysShowResizeHandle: 'mobile',
-            disableDrag: true,
-            disableResize: true,
-            
-            // --- 【v3.9 RWD 修復】 ---
-            oneColumnMode: 'auto',
-            oneColumnModeBreakpoint: 768 // 必須匹配 CSS
-            // ---
-        });
-        
-        if (savedLayout) {
-            grid.load(savedLayout);
-        }
-    }, 100); 
+    // 【v3.15 修復】 移除 setTimeout, 移到 GridStack.init 之後
+    if (savedLayout) {
+        grid.load(savedLayout);
+    }
 }
  
-// --- 5. Toast 通知函式 ---
+// --- 5. Toast 通知函式 (不變) ---
 function showToast(message, type = 'info') {
     const toast = document.getElementById("toast-notification");
     if (!toast) return;
@@ -131,7 +133,7 @@ function showToast(message, type = 'info') {
     }, 3000);
 }
  
-// --- 6. 控制台 Socket 監聽器 ---
+// --- 6. 控制台 Socket 監聽器 (不變) ---
 socket.on("connect", () => {
     console.log("Socket.io 已連接 (v3.0 Cookie Auth)");
     statusBar.classList.remove("visible");
@@ -183,7 +185,7 @@ socket.on("updateOnlineList", (admins) => {
 });
 
  
-// --- 7. API 請求函式 ---
+// --- 7. API 請求函式 (不變) ---
 async function apiRequest(endpoint, body = {}, a_returnResponse = false) {
     try {
         const res = await fetch(endpoint, {
@@ -224,7 +226,7 @@ async function apiRequest(endpoint, body = {}, a_returnResponse = false) {
     }
 }
  
-// --- 8. GUI 渲染函式 ---
+// --- 8. GUI 渲染函式 (不變) ---
 function renderPassedListUI(numbers) {
     passedListUI.innerHTML = ""; 
     if (!Array.isArray(numbers)) return;
@@ -320,7 +322,7 @@ function renderOnlineList(admins) {
 }
 
  
-// --- 9. 控制台按鈕功能 ---
+// --- 9. 控制台按鈕功能 (不變) ---
 async function changeNumber(direction) {
     if (isChangingNumber) return; 
     isChangingNumber = true;
@@ -394,7 +396,7 @@ async function clearAdminLog() {
     }
 }
  
-// --- 10. 綁定按鈕事件 ---
+// --- 10. 綁定按鈕事件 (v3.12, 不變) ---
 document.getElementById("next").onclick = () => changeNumber("next");
 document.getElementById("prev").onclick = () => changeNumber("prev");
 document.getElementById("setNumber").onclick = setNumber;
@@ -448,12 +450,12 @@ addFeaturedBtn.onclick = async () => {
     addFeaturedBtn.disabled = false;
 };
  
-// --- 11. 綁定 Enter 鍵 ---
+// --- 11. 綁定 Enter 鍵 (不變) ---
 newPassedNumberInput.addEventListener("keyup", (event) => { if (event.key === "Enter") { addPassedBtn.click(); } });
 newLinkTextInput.addEventListener("keyup", (event) => { if (event.key === "Enter") { newLinkUrlInput.focus(); } });
 newLinkUrlInput.addEventListener("keyup", (event) => { if (event.key === "Enter") { addFeaturedBtn.click(); } });
  
-// --- 12. 綁定開關 ---
+// --- 12. 綁定開關 (不變) ---
 soundToggle.addEventListener("change", () => {
     const isEnabled = soundToggle.checked;
     apiRequest("/api/settings/sound", { enabled: isEnabled });
@@ -469,7 +471,7 @@ publicToggle.addEventListener("change", () => {
     apiRequest("/api/settings/public", { isPublic: isPublic });
 });
  
-// --- 13. 綁定 GridStack 控制按鈕 ---
+// --- 13. 綁定 GridStack 控制按鈕 (不變) ---
 if (saveLayoutBtn) {
     saveLayoutBtn.addEventListener("click", async () => {
         if (!grid) return;
