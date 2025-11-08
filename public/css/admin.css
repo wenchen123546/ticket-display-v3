@@ -301,20 +301,25 @@ textarea { height: 80px; text-align: left; padding: 10px; }
     #number { font-size: 4rem; } 
     .list-editor { padding: 10px; } 
     
-    /* * --- 【RWD 修正 v2】 GridStack 手機版高度修正 ---
+    /* * --- 【RWD 修正 v3】 GridStack 手機版高度修正 ---
      * 這是更強硬的修正，強制移除 GridStack 的 JS 計算高度，
      * 並讓卡片恢復正常的文檔流 (static) 堆疊。
      */
     .grid-stack-one-column-mode .grid-stack-item {
         /* 關鍵：移除 GridStack 的 JS 計算高度和 Y 軸定位 */
         height: auto !important; 
-        position: static !important; /* 關鍵：讓卡片像正常網頁一樣堆疊 */
+        position: relative !important; /* 改回 relative (Gridstack 預設) */
+        top: auto !important; /* 移除 JS 計算的 top */
+        left: 0 !important; /* 確保 x 軸歸零 */
+        width: 100% !important; /* 確保 100% 寬 */
         margin-bottom: 20px !important; /* 增加卡片間的垂直間距 */
     }
     .grid-stack-one-column-mode .grid-stack-item-content,
     .grid-stack-one-column-mode .admin-card {
+        /* 關鍵：讓卡片內部也自動撐開 */
         height: auto !important;
-        position: static !important;
+        min-height: 200px; /* 給個最小高度, 避免空卡片 */
+        position: relative !important;
     }
 }
 
