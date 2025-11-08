@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>超級管理員面板</title>
+<link rel="stylesheet" href="/css/admin.css?v=7">
+<style>
+    /* 針對此頁面的一些微調 */
+    body { padding-top: 30px; }
+    #panel-container { max-width: 900px; margin: 0 auto; }
+    .user-list-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        margin-bottom: 10px;
+        background: #fff;
+    }
+    .user-info { font-size: 1.1rem; }
+    .user-info span {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 4px;
+        background: #eee;
+        font-size: 0.9rem;
+        margin-left: 10px;
+    }
+    .user-info .role-superadmin { background: var(--color-danger); color: white; }
+    .user-info .role-admin { background: var(--color-secondary); color: white; }
+</style>
+</head>
+<body>
+
+<div id="panel-container">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h1>超級管理員面板</h1>
+        <button id="logout-button" type="button" class="btn-warn" style="width: auto; min-width: 100px;">登出</button>
+    </div>
+    <p id="welcome-message" style="text-align: left; font-size: 1.2rem;">正在載入...</p>
+
+    <div class="admin-grid" style="grid-template-columns: 1fr 1fr;">
+        <div class="grid-column">
+            <div class="admin-card">
+                <h3><span class="card-icon">👥</span> 用戶列表</h3>
+                <div id="user-list-container">
+                    <p>正在載入列表...</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid-column">
+            <div class="admin-card">
+                <h3><span class="card-icon">➕</span> 建立新用戶</h3>
+                <div class="control-group">
+                    <label for="new-username">新用戶帳號 (小寫英文/數字)</label>
+                    <input type="text" id="new-username" placeholder="例如: user_a">
+                </div>
+                <div class="control-group">
+                    <label for="new-password">新用戶密碼</label>
+                    <input type="password" id="new-password" placeholder="至少 8 個字元">
+                </div>
+                <div class="control-group">
+                    <label for="new-role">指派角色</label>
+                    <select id="new-role" style="width: 100%; padding: 8px; font-size: 1.1rem; margin-top: 10px;">
+                        <option value="admin" selected>管理員 (Admin)</option>
+                        <option value="superadmin">超級管理員 (Super Admin)</option>
+                    </select>
+                </div>
+                <button id="create-user-button" type="button" class="btn-success">建立用戶</button>
+                <p id="create-error" style="color: var(--color-danger);"></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/js/superadmin-panel.js"></script>
+</body>
+</html>
