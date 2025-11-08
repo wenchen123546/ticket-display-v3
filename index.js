@@ -1,27 +1,9 @@
 /*
  * ==========================================
  * 伺服器 (index.js)
- * * (使用 Upstash Redis 資料庫)
- * * (已加入「音效開關」功能)
- * * (已加入 API 驗證、Redis 事務、Socket 錯誤處理)
- * *
- * * 【2025-11-07 重構】
- * * 1. 修復 /change-number 競爭條件 (Race Condition)
- * * 2. 變更 featuredContents 為 Redis List 結構
- * * 3. 移除 /set-... 路由，改為即時 API (add/remove)
- * * 4. 移除 io.use() 全域驗證，允許前台 (public) 連線
- * * 5. 移除 MAX_PASSED_NUMBERS (5筆) 的資料讀取與寫入限制
- * *
- * * 【2025-11-07 優化】
- * * 6. 【A. 修改】 將 KEY_PASSED_NUMBERS 從 LIST 改為 ZSET (Sorted Set)
- * * 以實現自動由小到大排序
- * *
- * * 【2025-11-08 改善 - 來自 Gemini】
- * * 1. 【1.B】 使用 Lua 腳本修復 /change-number 'prev' 的競爭條件
- * * 2. 【2.A】 增加 /api/passed/clear 和 /api/featured/clear API
- * * 3. 【3.A】 調整 Socket.io 連線日誌與 disconnect 監聽器位置
- * * 4. 【優化 1】 使用 Redis Pipelining (multi) 優化新連線的資料讀取
+ * ... (舊註解) ...
  * * 5. 【新功能】 增加 KEY_IS_PUBLIC 鍵，實現「維護模式」
+ * * 6. 【新功能】 增加 GridStack 儀表板排版儲存/讀取 API
  * ==========================================
  */
 
@@ -61,7 +43,6 @@ redis.on('connect', () => { console.log("✅ 成功連線到 Upstash Redis 資�
 redis.on('error', (err) => { console.error("❌ Redis 連線錯誤:", err); process.exit(1); });
 
 // --- 【1.B 改善】定義一個原子操作的 Lua 腳本 ---
-// 'decrIfPositive' (如果大於 0 才減 1)
 redis.defineCommand("decrIfPositive", {
     numberOfKeys: 1,
     lua: `
@@ -81,7 +62,8 @@ const KEY_PASSED_NUMBERS = 'callsys:passed';
 const KEY_FEATURED_CONTENTS = 'callsys:featured';
 const KEY_LAST_UPDATED = 'callsys:updated';
 const KEY_SOUND_ENABLED = 'callsys:soundEnabled';
-const KEY_IS_PUBLIC = 'callsys:isPublic'; // 【新功能】 增加維護模式的 Key
+const KEY_IS_PUBLIC = 'callsys:isPublic'; 
+const KEY_ADMIN_LAYOUT = 'callsys:admin-layout'; // 【新功能】 儲存排版
 
 // --- 7. Express 中介軟體 (Middleware) ---
 app.use(express.static("public"));
@@ -257,14 +239,11 @@ app.post("/set-sound-enabled", authMiddleware, async (req, res) => {
     }
 });
 
-// --- 【新功能】 增加設定維護模式的 API ---
 app.post("/set-public-status", authMiddleware, async (req, res) => {
     try {
         const { isPublic } = req.body;
         const valueToSet = isPublic ? "1" : "0";
         await redis.set(KEY_IS_PUBLIC, valueToSet);
-        
-        // 廣播給所有人 (包含前台)
         io.emit("updatePublicStatus", isPublic); 
         await updateTimestamp();
         res.json({ success: true, isPublic: isPublic });
@@ -282,14 +261,15 @@ app.post("/reset", authMiddleware, async (req, res) => {
         multi.del(KEY_PASSED_NUMBERS);
         multi.del(KEY_FEATURED_CONTENTS);
         multi.set(KEY_SOUND_ENABLED, "1");
-        multi.set(KEY_IS_PUBLIC, "1"); // 【新功能】 重置時預設為公開
+        multi.set(KEY_IS_PUBLIC, "1"); 
+        multi.del(KEY_ADMIN_LAYOUT); // 【新功能】 重置時清空排版
         await multi.exec();
 
         io.emit("update", 0);
         io.emit("updatePassed", []);
         io.emit("updateFeaturedContents", []);
         io.emit("updateSoundSetting", true);
-        io.emit("updatePublicStatus", true); // 【新功能】 廣播重置後的狀態
+        io.emit("updatePublicStatus", true); 
 
         await updateTimestamp();
 
@@ -315,14 +295,13 @@ io.on("connection", async (socket) => {
     }
 
     try {
-        // --- 【優化 1】 使用 Pipelining (multi) ---
         const pipeline = redis.multi();
         pipeline.get(KEY_CURRENT_NUMBER);
         pipeline.zrange(KEY_PASSED_NUMBERS, 0, -1);
         pipeline.lrange(KEY_FEATURED_CONTENTS, 0, -1);
         pipeline.get(KEY_LAST_UPDATED);
         pipeline.get(KEY_SOUND_ENABLED);
-        pipeline.get(KEY_IS_PUBLIC); // 【新功能】 讀取公開狀態
+        pipeline.get(KEY_IS_PUBLIC); 
         
         const results = await pipeline.exec();
 
@@ -336,21 +315,21 @@ io.on("connection", async (socket) => {
         const featuredContentsJSONs = results[2][1] || [];
         const lastUpdatedRaw = results[3][1];
         const soundEnabledRaw = results[4][1];
-        const isPublicRaw = results[5][1]; // 【新功能】
+        const isPublicRaw = results[5][1]; 
 
         const currentNumber = Number(currentNumberRaw || 0);
         const passedNumbers = passedNumbersRaw.map(Number);
         const featuredContents = featuredContentsJSONs.map(JSON.parse);
         const lastUpdated = lastUpdatedRaw || new Date().toISOString();
         const isSoundEnabled = soundEnabledRaw === null ? "1" : soundEnabledRaw;
-        const isPublic = isPublicRaw === null ? "1" : isPublicRaw; // 【新功能】 預設為 "1" (公開)
+        const isPublic = isPublicRaw === null ? "1" : isPublicRaw; 
 
         socket.emit("update", currentNumber);
         socket.emit("updatePassed", passedNumbers);
         socket.emit("updateFeaturedContents", featuredContents);
         socket.emit("updateTimestamp", lastUpdated);
         socket.emit("updateSoundSetting", isSoundEnabled === "1");
-        socket.emit("updatePublicStatus", isPublic === "1"); // 【新功能】 傳送狀態
+        socket.emit("updatePublicStatus", isPublic === "1"); 
 
     }
     catch (e) {
@@ -359,7 +338,47 @@ io.on("connection", async (socket) => {
     }
 });
 
-// --- 11. 啟動伺服器 ---
+// --- 11. 【新功能】 儀表板排版 API ---
+
+/**
+ * 讀取儲存的排版
+ * 我們使用 POST 是為了方便傳遞 token 進行驗證
+ */
+app.post("/api/layout/load", authMiddleware, async (req, res) => {
+    try {
+        const layoutJSON = await redis.get(KEY_ADMIN_LAYOUT);
+        if (layoutJSON) {
+            res.json({ success: true, layout: JSON.parse(layoutJSON) });
+        } else {
+            // 找不到排版 (例如第一次登入)
+            res.json({ success: true, layout: null });
+        }
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+/**
+ * 儲存新的排版
+ */
+app.post("/api/layout/save", authMiddleware, async (req, res) => {
+    try {
+        const { layout } = req.body;
+        if (!layout || !Array.isArray(layout)) {
+            return res.status(400).json({ error: "排版資料格式不正確。" });
+        }
+        
+        const layoutJSON = JSON.stringify(layout);
+        await redis.set(KEY_ADMIN_LAYOUT, layoutJSON);
+        
+        res.json({ success: true, message: "排版已儲存。" });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+
+// --- 12. 啟動伺服器 ---
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ Server running on host 0.0.0.0, port ${PORT}`);
     console.log(`🎟 User page (local): http://localhost:${PORT}/index.html`);
