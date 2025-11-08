@@ -25,6 +25,7 @@ const saveLayoutBtn = document.getElementById("save-layout-btn");
 let token = "";
 let resetAllTimer = null;
 let grid = null; // GridStack 物件
+let toastTimer = null; // 【新】 Toast 計時器
 
 // --- 3. Socket.io ---
 const socket = io({ 
@@ -50,16 +51,16 @@ async function showPanel() {
 
     let savedLayout = null;
     try {
-        adminLog("正在讀取儀表板排版...");
+        // (日誌現在由 Socket.io 載入，移除 adminLog)
         const response = await apiRequest("/api/layout/load", {}, true); // true = 需要回傳資料
         if (response && response.layout) {
             savedLayout = response.layout;
-            adminLog("✅ 成功讀取已儲存的排版");
+            showToast("✅ 已載入儲存的排版", "success");
         } else {
-            adminLog("ℹ️ 找不到已儲存的排版，使用預設排版");
+            showToast("ℹ️ 使用預設排版", "info");
         }
     } catch (e) {
-        adminLog(`❌ 讀取排版失敗: ${e.message}`);
+        showToast(`❌ 讀取排版失敗: ${e.message}`, "error");
     }
 
     setTimeout(() => {
@@ -109,59 +110,90 @@ document.addEventListener("DOMContentLoaded", () => { showLogin(); });
 loginButton.addEventListener("click", () => { attemptLogin(passwordInput.value); });
 passwordInput.addEventListener("keyup", (event) => { if (event.key === "Enter") { attemptLogin(passwordInput.value); } });
 
-// --- 5. 日誌輔助函式 ---
-function adminLog(message) {
-    if (!adminLogUI) return;
-    const li = document.createElement("li");
-    if (message.includes("❌") || message.includes("失敗")) {
-        li.style.color = "var(--color-danger-light)";
-    } else if (message.includes("✅") || message.includes("成功")) {
-        li.style.color = "var(--color-success)";
-    }
-    li.textContent = `[${new Date().toLocaleTimeString('zh-TW')}] ${message}`;
-    adminLogUI.append(li);
-    adminLogUI.scrollTop = adminLogUI.scrollHeight;
+// --- 5. 【新】 Toast 通知函式 ---
+function showToast(message, type = 'info') {
+    const toast = document.getElementById("toast-notification");
+    if (!toast) return;
+    
+    toast.textContent = message;
+    toast.className = type; // 'success' or 'error' or 'info'
+    
+    toast.classList.add("show");
+    
+    if (toastTimer) clearTimeout(toastTimer);
+    
+    toastTimer = setTimeout(() => {
+        toast.classList.remove("show");
+    }, 3000);
 }
+
 
 // --- 6. 控制台 Socket 監聽器 ---
 socket.on("connect", () => {
     console.log("Socket.io 已連接");
     statusBar.classList.remove("visible");
+    showToast("✅ 已連線到伺服器", "success");
 });
 socket.on("disconnect", () => {
     console.warn("Socket.io 已斷線");
     statusBar.classList.add("visible");
-    adminLog("❌ 連線中斷");
+    showToast("❌ 已從伺服器斷線", "error");
 });
 socket.on("connect_error", (err) => {
     console.error("Socket 連線失敗:", err.message);
-    adminLog(`❌ Socket 連線失敗: ${err.message}`);
     if (err.message === "Authentication failed") {
         alert("密碼驗證失敗或 Token 已過期，請重新登入。");
         showLogin();
     }
 });
+
+// --- 【新】 伺服器日誌監聽器 ---
+socket.on("initAdminLogs", (logs) => {
+    adminLogUI.innerHTML = "";
+    if (!logs || logs.length === 0) {
+        adminLogUI.innerHTML = "<li>[目前尚無日誌]</li>";
+        return;
+    }
+    const fragment = document.createDocumentFragment();
+    logs.forEach(logMsg => {
+        const li = document.createElement("li");
+        li.textContent = logMsg;
+        fragment.appendChild(li);
+    });
+    adminLogUI.appendChild(fragment);
+    adminLogUI.scrollTop = adminLogUI.scrollHeight; // 自動滾動到底部
+});
+
+socket.on("newAdminLog", (logMessage) => {
+    // 移除 "尚無日誌" 的提示
+    const firstLi = adminLogUI.querySelector("li");
+    if (firstLi && firstLi.textContent.includes("[目前尚無日誌]")) {
+        adminLogUI.innerHTML = "";
+    }
+    
+    const li = document.createElement("li");
+    li.textContent = logMessage;
+    adminLogUI.prepend(li); // 將最新的日誌加到最上方
+});
+// ---
+
+// (移除舊的 update, updatePassed 等事件中的 adminLog 呼叫)
 socket.on("update", (num) => {
     numberEl.textContent = num;
-    adminLog(`號碼更新為 ${num}`);
 });
 socket.on("updatePassed", (numbers) => {
     renderPassedListUI(numbers);
-    adminLog("過號列表已更新");
 });
 socket.on("updateFeaturedContents", (contents) => {
     renderFeaturedListUI(contents);
-    adminLog("精選連結已更新");
 });
 socket.on("updateSoundSetting", (isEnabled) => {
     console.log("收到音效設定:", isEnabled);
     soundToggle.checked = isEnabled;
-    adminLog(`音效已設為 ${isEnabled ? '開啟' : '關閉'}`);
 });
 socket.on("updatePublicStatus", (isPublic) => {
     console.log("收到公開狀態:", isPublic);
     publicToggle.checked = isPublic;
-    adminLog(`前台已設為 ${isPublic ? '對外開放' : '關閉維護'}`);
 });
 socket.on("updateTimestamp", (timestamp) => {
     console.log("Timestamp updated:", timestamp);
@@ -183,8 +215,9 @@ async function apiRequest(endpoint, body, a_returnResponse = false) {
                 alert("密碼驗證失敗或 Token 已過期，請重新登入。");
                 showLogin();
             } else {
-                adminLog(`❌ API 錯誤 (${endpoint}): ${responseData.error || "未知錯誤"}`);
-                alert("發生錯誤：" + (responseData.error || "未知錯誤"));
+                const errorMsg = responseData.error || "未知錯誤";
+                showToast(`❌ API 錯誤: ${errorMsg}`, "error");
+                alert("發生錯誤：" + errorMsg);
             }
             return false;
         }
@@ -195,7 +228,7 @@ async function apiRequest(endpoint, body, a_returnResponse = false) {
         
         return true; 
     } catch (err) {
-        adminLog(`❌ 網路連線失敗: ${err.message}`);
+        showToast(`❌ 網路連線失敗: ${err.message}`, "error");
         alert("網路連線失敗或伺服器無回應：" + err.message);
         return false;
     }
@@ -216,8 +249,8 @@ function renderPassedListUI(numbers) {
         deleteBtn.onclick = async () => {
             if (confirm(`確定要刪除過號 ${number} 嗎？`)) {
                 deleteBtn.disabled = true;
-                adminLog(`正在刪除過號 ${number}...`);
                 await apiRequest("/api/passed/remove", { number: number });
+                // (日誌由伺服器自動發送)
             }
         };
         li.appendChild(deleteBtn);
@@ -226,9 +259,7 @@ function renderPassedListUI(numbers) {
     passedListUI.appendChild(fragment);
 }
 
-//
-// --- 【XSS 安全修正】 vvv
-//
+// 【XSS 安全修正】
 function renderFeaturedListUI(contents) {
     featuredListUI.innerHTML = "";
     if (!Array.isArray(contents)) return;
@@ -237,26 +268,15 @@ function renderFeaturedListUI(contents) {
     
     contents.forEach((item) => {
         const li = document.createElement("li");
-        
-        // --- 【安全修正】 ---
-        // 1. 建立 span (用於 linkText)
         const span = document.createElement("span");
-        
-        // 2. 建立 linkText 節點並使用 .textContent (防止 XSS)
         const textNode = document.createTextNode(item.linkText);
         span.appendChild(textNode);
-        
-        // 3. 建立 br 換行
         span.appendChild(document.createElement("br"));
-        
-        // 4. 建立 small (用於 linkUrl)
         const small = document.createElement("small");
         small.style.color = "#666";
-        small.textContent = item.linkUrl; // .textContent 是安全的
+        small.textContent = item.linkUrl; 
         span.appendChild(small);
-        
         li.appendChild(span);
-        // --- 【修正結束】 ---
 
         const deleteBtn = document.createElement("button");
         deleteBtn.type = "button";
@@ -264,10 +284,8 @@ function renderFeaturedListUI(contents) {
         deleteBtn.textContent = "×";
         
         deleteBtn.onclick = async () => {
-            // 詢問時也使用 textContent 來顯示，避免 alert XSS
             if (confirm(`確定要刪除連結 ${item.linkText} 嗎？`)) { 
                 deleteBtn.disabled = true;
-                adminLog(`正在刪除連結 ${item.linkText}...`);
                 await apiRequest("/api/featured/remove", {
                     linkText: item.linkText,
                     linkUrl: item.linkUrl
@@ -279,9 +297,6 @@ function renderFeaturedListUI(contents) {
     });
     featuredListUI.appendChild(fragment);
 }
-//
-// --- 【XSS 安全修正】 ^^^
-//
 
 // --- 9. 控制台按鈕功能 ---
 async function changeNumber(direction) {
@@ -293,6 +308,7 @@ async function setNumber() {
     const success = await apiRequest("/set-number", { number: num });
     if (success) {
         document.getElementById("manualNumber").value = "";
+        showToast("✅ 號碼已設定", "success");
     }
 }
 async function resetNumber() {
@@ -300,27 +316,21 @@ async function resetNumber() {
     const success = await apiRequest("/set-number", { number: 0 });
     if (success) {
         document.getElementById("manualNumber").value = "";
-        alert("號碼已重置為 0。");
+        showToast("✅ 號碼已重置為 0", "success");
     }
 }
 async function resetPassed_fixed() {
     if (!confirm("確定要清空「已叫號碼(過號)」列表嗎？")) return;
-    adminLog("正在清空過號列表...");
     const success = await apiRequest("/api/passed/clear", {});
     if (success) {
-        adminLog("✅ 過號列表已清空");
-    } else {
-        adminLog("❌ 清空過號列表失敗");
+        showToast("✅ 過號列表已清空", "success");
     }
 }
 async function resetFeaturedContents_fixed() {
     if (!confirm("確定要清空「精選連結」嗎？")) return;
-    adminLog("正在清空精選連結...");
     const success = await apiRequest("/api/featured/clear", {});
     if (success) {
-        adminLog("✅ 精選連結已清空");
-    } else {
-        adminLog("❌ 清空精選連結失敗");
+        showToast("✅ 精選連結已清空", "success");
     }
 }
 function cancelResetAll() {
@@ -332,30 +342,29 @@ function cancelResetAll() {
     }
 }
 async function confirmResetAll() {
-    adminLog("⚠️ 正在執行所有重置...");
     const success = await apiRequest("/reset", {});
     if (success) {
         document.getElementById("manualNumber").value = "";
-        alert("已全部重置。");
-        adminLog("✅ 所有資料已重置");
-        location.reload();
-    } else {
-        adminLog("❌ 重置失敗");
+        showToast("💥 所有資料已重置", "success");
+        location.reload(); // 重載以獲取新排版和日誌
     }
     cancelResetAll();
 }
 function requestResetAll() {
-    adminLog("要求重置所有資料，等待確認...");
     resetAllBtn.style.display = "none";
     resetAllConfirmBtn.style.display = "block";
     resetAllTimer = setTimeout(() => {
-        adminLog("重置操作已自動取消 (逾時)");
         cancelResetAll();
     }, 5000);
 }
-function clearAdminLog() {
-    adminLogUI.innerHTML = "";
-    adminLog("日誌已清除。");
+
+// 【修改】 清除日誌功能
+async function clearAdminLog() {
+    if (confirm("確定要永久清除「所有」管理員的操作日誌嗎？\n此動作無法復原。")) {
+        showToast("🧼 正在清除日誌...", "info");
+        await apiRequest("/api/logs/clear", {});
+        // UI 會由 "initAdminLogs" socket 事件自動更新
+    }
 }
 
 // --- 10. 綁定按鈕事件 ---
@@ -367,7 +376,7 @@ document.getElementById("resetFeaturedContents").onclick = resetFeaturedContents
 document.getElementById("resetPassed").onclick = resetPassed_fixed;
 resetAllBtn.onclick = requestResetAll;
 resetAllConfirmBtn.onclick = confirmResetAll;
-clearLogBtn.onclick = clearAdminLog;
+clearLogBtn.onclick = clearAdminLog; // 已更新
 
 addPassedBtn.onclick = async () => {
     const num = Number(newPassedNumberInput.value);
@@ -426,7 +435,7 @@ publicToggle.addEventListener("change", () => {
     apiRequest("/set-public-status", { isPublic: isPublic });
 });
 
-// --- 13. 【新】 綁定 GridStack 儲存按鈕 ---
+// --- 13. 綁定 GridStack 儲存按鈕 ---
 if (saveLayoutBtn) {
     saveLayoutBtn.addEventListener("click", async () => {
         if (!grid) return;
@@ -439,16 +448,14 @@ if (saveLayoutBtn) {
             h: item.h 
         }));
 
-        adminLog("正在儲存排版到 Redis...");
+        showToast("💾 正在儲存排版...", "info");
         console.log("正在儲存:", JSON.stringify(layoutData, null, 2));
 
         const success = await apiRequest("/api/layout/save", { layout: layoutData });
         
         if (success) {
-            adminLog("✅ 排版已成功儲存！");
-            alert("儀表板排版已儲存。");
-        } else {
-            adminLog("❌ 儲存排版失敗。");
-        }
+            showToast("✅ 排版已成功儲存！", "success");
+        } 
+        // (失敗的 toast 會由 apiRequest 自動處理)
     });
 }
