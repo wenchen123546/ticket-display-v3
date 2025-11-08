@@ -1,4 +1,4 @@
-// public/js/admin.js (v3.15 / v3.16)
+// public/js/admin.js (v3.15 / v3.17)
 
 // --- 1. 元素節點 (DOM) ---
 const adminPanel = document.getElementById("admin-panel");
