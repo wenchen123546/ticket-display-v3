@@ -6,7 +6,7 @@
 <title>後台管理 - 儀表板</title>
 <script src="/socket.io/socket.io.js"></script>
 
-<link rel="stylesheet" href="/css/admin.css?v=12">
+<link rel="stylesheet" href="/css/admin.css?v=13">
 
 <link href="https://cdn.jsdelivr.net/npm/gridstack@9.5.1/dist/gridstack.min.css" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/gridstack@9.5.1/dist/gridstack-all.js"></script>
@@ -23,13 +23,13 @@
 <p id="login-error"></p>
 </div>
 
-<div id="admin-panel" style="display:none;"> <h1>目前號碼：<span id="number">0</span></h1>
+<div id="admin-panel" style="display:none;"> 
+<h1>目前號碼：<span id="number">0</span></h1>
 
 <div class="control-group button-row" id="main-number-controls">
 <button id="prev" type="button" class="btn-warn">上一號</button>
 <button id="next" type="button" class="btn-success">下一號</button>
 </div>
-
 
 <div class="grid-stack">
 
@@ -56,8 +56,10 @@
                 </div>
                 </div>
             </div>
-            </div>
-    </div> <div class="grid-stack-item" id="card-editor" gs-x="6" gs-y="0" gs-w="6" gs-h="4" gs-min-w="4" gs-min-h="4">
+        </div>
+    </div> 
+
+    <div class="grid-stack-item" id="card-editor" gs-x="6" gs-y="0" gs-w="6" gs-h="4" gs-min-w="4" gs-min-h="4">
         <div class="grid-stack-item-content">
             <div class="admin-card">
                 <h3><span class="card-icon">📝</span> 列表編輯</h3>
@@ -74,7 +76,9 @@
                 </div>
             </div>
         </div>
-    </div> <div class="grid-stack-item" id="card-logs" gs-x="0" gs-y="5" gs-w="6" gs-h="3" gs-min-w="4" gs-min-h="3">
+    </div> 
+    
+    <div class="grid-stack-item" id="card-logs" gs-x="0" gs-y="5" gs-w="6" gs-h="3" gs-min-w="4" gs-min-h="3">
         <div class="grid-stack-item-content">
             <div class="admin-card">
                 <h3><span class="card-icon">📋</span> 即時操作日誌</h3>
@@ -86,7 +90,9 @@
                 </div>
             </div>
         </div>
-    </div> <div class="grid-stack-item" id="card-settings" gs-x="6" gs-y="4" gs-w="6" gs-h="4" gs-min-w="4" gs-min-h="4">
+    </div> 
+
+    <div class="grid-stack-item" id="card-settings" gs-x="6" gs-y="4" gs-w="6" gs-h="4" gs-min-w="4" gs-min-h="4">
         <div class="grid-stack-item-content">
             <div class="admin-card">
                 <h3><span class="card-icon">⚙️</span> 系統設定</h3>
@@ -123,6 +129,6 @@
 
 <div id="toast-notification"></div>
 
-<script src="/js/admin.js?v=12"></script>
+<script src="/js/admin.js?v=13"></script>
 </body>
 </html>
