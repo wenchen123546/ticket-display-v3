@@ -1,9 +1,9 @@
 /*
  * ==========================================
- * 伺服器 (index.js) - v3.6 (PWA 修復版)
+ * 伺服器 (index.js) - v3.7
  *
- * 【v3.6 修改】
- * - [Bug修復] 新增 no-cache 中介軟體，強制 /sw.js 檔案永遠不被瀏覽器快取
+ * 【v3.7 修改】
+ * - [PWA 移除] 移除 v3.6 針對 /sw.js 的 no-cache 中介軟體
  * ==========================================
  */
  
@@ -43,16 +43,7 @@ io.use(wrap(cookieParser()));
 
 // --- 4. Express 中介軟體 (Middleware) ---
 
-// 【v3.6 Bug修復】 
-// 必須在 express.static 之前，確保 /sw.js 檔案永遠不會被 HTTP 快取
-app.use((req, res, next) => {
-    if (req.path === '/sw.js') {
-        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-        res.setHeader('Pragma', 'no-cache');
-        res.setHeader('Expires', '0');
-    }
-    next();
-});
+// 【v3.7 移除】 /sw.js no-cache 中介軟體已移除
 
 app.use(helmet({
     contentSecurityPolicy: {
@@ -109,7 +100,7 @@ app.use(centralErrorHandler);
 
 // --- 9. 伺服器啟動 (不變) ---
 server.listen(PORT, '0.0.0.0', async () => {
-    console.log(`✅ Server (v3.6) running on host 0.0.0.0, port ${PORT}`);
+    console.log(`✅ Server (v3.7) running on host 0.0.0.0, port ${PORT}`);
     console.log(`🎟 User page (local): http://localhost:${PORT}/index.html`);
     console.log(`🛠 Admin login: http://localhost:${PORT}/login.html`); 
      
