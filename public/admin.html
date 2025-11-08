@@ -98,9 +98,7 @@
                      <label>儀表板控制</label>
                      <button id="toggle-layout-lock-btn" type="button" class="btn-warn" style="display:none;">🔓 解鎖排版</button>
                      <button id="save-layout-btn" type="button" class="btn-secondary" style="display:none;">💾 儲存儀表板排版</button>
-                     
                      <button id="logout-button" type="button" class="btn-warn" style="background-color: #71717a;">登出</button>
-                     
                      <a href="/superadmin-panel.html" id="superadmin-link" class="btn-superadmin" style="display:none;">👑 管理用戶</a>
                  </div>
  
@@ -114,7 +112,19 @@
                      <button id="resetAll" type="button" class="btn-danger">💥 重置所有 (點擊確認)</button>
                      <button id="resetAllConfirm" type="button" class="btn-danger-confirm" style="display:none;">⚠️ 點此確認重置 ⚠️</button>
                  </div>
- 
+            </div>
+        </div>
+    </div> 
+
+    <div class="grid-stack-item" id="card-online-users" gs-x="0" gs-y="8" gs-w="6" gs-h="3" gs-min-w="4" gs-min-h="3">
+        <div class="grid-stack-item-content">
+            <div class="admin-card">
+                 <h3><span class="card-icon">🟢</span> 在線管理員 (<span id="online-admin-count">0</span>)</h3>
+                 <div class="control-group online-admin-container">
+                     <ul id="online-admin-list">
+                         <li class="empty-state">正在載入...</li>
+                     </ul>
+                 </div>
             </div>
         </div>
     </div> 
