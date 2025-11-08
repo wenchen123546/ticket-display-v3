@@ -8,12 +8,17 @@ const {
     KEY_LAST_UPDATED,
     KEY_SOUND_ENABLED,
     KEY_IS_PUBLIC,
-    KEY_ADMIN_LOG
-} = require('./constants'); // 我們將 Keys 移出
+    KEY_ADMIN_LOG,
+    KEY_USERS_HASH, // 【v3.8】 引入
+    KEY_ONLINE_ADMINS // 【v3.8】 引入
+} = require('./constants'); 
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
-// 輔助函式：發送初始狀態 (與 v2.5 相同)
+// 【v3.8】 管理員專用的廣播頻道
+const ADMIN_BROADCAST_ROOM = 'admin_room';
+
+// 輔助函式：發送初始狀態 (不變)
 async function sendInitialState(socket) {
     try {
         const pipeline = redis.multi();
@@ -41,11 +46,37 @@ async function sendInitialState(socket) {
     }
 }
 
+// 【v3.8】 新增：廣播在線管理員列表
+async function broadcastOnlineAdmins(io) {
+    try {
+        const onlineUsernames = await redis.hkeys(KEY_ONLINE_ADMINS);
+        
+        if (onlineUsernames.length === 0) {
+            io.to(ADMIN_BROADCAST_ROOM).emit("updateOnlineList", []);
+            return;
+        }
+
+        // 從 Users HASH 中撈取這些在線用戶的詳細資料
+        const userJSONs = await redis.hmget(KEY_USERS_HASH, ...onlineUsernames);
+        
+        const userPayloads = userJSONs
+            .filter(json => json) // 過濾掉 null (以防萬一)
+            .map(json => {
+                const user = JSON.parse(json);
+                return { username: user.username, role: user.role }; // 只發送必要的資訊
+            });
+            
+        io.to(ADMIN_BROADCAST_ROOM).emit("updateOnlineList", userPayloads);
+    } catch (e) {
+        console.error("❌ 廣播在線管理員列表失敗:", e);
+    }
+}
+
+
 // Socket.io 連線處理
 function initializeSocket(io) {
     io.on("connection", async (socket) => {
         
-        // 【v3.0】 從 HttpOnly Cookie 讀取 Token
         const token = socket.request.cookies.token;
          
         let payload;
@@ -55,17 +86,19 @@ function initializeSocket(io) {
         }
         catch (e) {
             // ( Public User 邏輯 )
-            // console.log("🔌 一個 Public User 連線", socket.id);
             await sendInitialState(socket);
             return; 
         }
      
-        // --- 以下為 JWT 驗證成功的管理員 ---
+        // --- 【v3.8】 以下為 JWT 驗證成功的管理員 ---
          
-        // console.log(`✅ Admin 連線: ${payload.username}`, socket.id);
-        socket.on("disconnect", (reason) => {
-            // console.log(`🔌 Admin ${payload.username} 斷線: ${reason}`);
-        });
+        // console.log(`✅ Admin 連線: ${payload.username}`);
+        
+        // 【v3.8】 將用戶資料附加到 socket 上，以便 'disconnect' 事件使用
+        socket.user = payload; 
+        
+        // 【v3.8】 加入管理員廣播頻道
+        socket.join(ADMIN_BROADCAST_ROOM);
      
         await sendInitialState(socket);
      
@@ -76,11 +109,42 @@ function initializeSocket(io) {
         catch (e) {
             console.error("讀取日誌歷史失敗:", e);
         }
+
+        // --- 【v3.8】 處理在線列表 (連線時) ---
+        try {
+            // HASH 欄位: username, 值: socket 數量 (計數+1)
+            await redis.hincrby(KEY_ONLINE_ADMINS, payload.username, 1);
+            await broadcastOnlineAdmins(io); // 廣播最新列表
+        } catch (e) {
+            console.error("❌ 更新在線列表 (連線) 失敗:", e);
+        }
+
+        // --- 【v3.8】 處理在線列表 (斷線時) ---
+        socket.on("disconnect", async (reason) => {
+            // console.log(`🔌 Admin ${socket.user?.username} 斷線: ${reason}`);
+            
+            if (!socket.user?.username) {
+                return; // 理論上不會發生
+            }
+
+            try {
+                const username = socket.user.username;
+                // 計數-1
+                const newCount = await redis.hincrby(KEY_ONLINE_ADMINS, username, -1);
+                
+                // 如果此用戶的 socket 數量歸零，才從 HASH 移除
+                if (newCount <= 0) {
+                    await redis.hdel(KEY_ONLINE_ADMINS, username);
+                }
+                
+                await broadcastOnlineAdmins(io); // 廣播最新列表
+            } catch (e) {
+                console.error("❌ 更新在線列表 (斷線) 失敗:", e);
+            }
+        });
     });
 }
 
 module.exports = {
-    initializeSocket,
-    sendInitialState,
-    // (其他輔助函式也可以放在這裡)
+    initializeSocket
 };
