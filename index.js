@@ -2,11 +2,12 @@
  * ==========================================
  * 伺服器 (index.js)
  * ... (舊註解) ...
- * * 6. 【新功能】 增加 GridStack 儀表板排版儲存/讀取 API
  * * 7. 【安全修復】 
  * * - 實作 express-rate-limit 防止暴力破解
  * * - 實作 helmet 增加 HTTP 安全標頭
  * * - 統一 API 驗證中間件
+ * * 8. 【CSP 修正】 
+ * * - 修正 helmet 的 CSP 策略，允許載入 GridStack 和 QR Code 的 CDN
  * ==========================================
  */
 
@@ -70,7 +71,21 @@ const KEY_IS_PUBLIC = 'callsys:isPublic';
 const KEY_ADMIN_LAYOUT = 'callsys:admin-layout'; 
 
 // --- 7. Express 中介軟體 (Middleware) ---
-app.use(helmet()); // 【安全】 自動加入安全標頭
+
+// 【安全修正】 
+// 告訴 helmet 我們的內容安全策略 (CSP)
+app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+        // 允許 'self' (我們自己), cdn.jsdelivr.net (GridStack), cdnjs.cloudflare.com (QR Code)
+        "script-src": ["'self'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
+        // 允許 'self', cdn.jsdelivr.net (GridStack CSS), 和 inline 樣式 (為了 CSS 補丁)
+        "style-src": ["'self'", "https://cdn.jsdelivr.net", "'unsafe-inline'"],
+      },
+    },
+}));
+
 app.use(express.static("public"));
 app.use(express.json());
 
@@ -79,8 +94,8 @@ const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 分鐘
     max: 1000, // 限制每個 IP 在 15 分鐘內最多 1000 次請求
     message: { error: "請求過於頻繁，請稍後再試。" },
-    standardHeaders: true, // 回傳速率限制的標頭
-    legacyHeaders: false, // 關閉舊的 X-RateLimit-* 標頭
+    standardHeaders: true, 
+    legacyHeaders: false, 
 });
 
 // 【安全】 設定一個「嚴格」的登入速率限制 (防止暴力破解)
@@ -130,10 +145,8 @@ async function broadcastFeaturedContents() {
 
 // --- 9. API 路由 (Routes) ---
 
-// 【安全】 登入 API：套用「嚴格」限制和驗證
 app.post("/check-token", loginLimiter, authMiddleware, (req, res) => { res.json({ success: true }); });
 
-// 【安全】 統一宣告所有受保護的 API
 const protectedAPIs = [
     "/change-number", "/set-number",
     "/api/passed/add", "/api/passed/remove", "/api/passed/clear",
@@ -141,11 +154,7 @@ const protectedAPIs = [
     "/set-sound-enabled", "/set-public-status", "/reset",
     "/api/layout/load", "/api/layout/save"
 ];
-// 【安全】 統一套用「通用」限制和「驗證」
 app.use(protectedAPIs, apiLimiter, authMiddleware);
-
-
-// --- 【重要】 以下所有路由「不再需要」單獨傳入 authMiddleware ---
 
 app.post("/change-number", async (req, res) => {
     try {
@@ -368,7 +377,6 @@ io.on("connection", async (socket) => {
 });
 
 // --- 11. 【新功能】 儀表板排版 API ---
-// (這些路由已在上面的 protectedAPIs 陣列中被保護)
 app.post("/api/layout/load", async (req, res) => {
     try {
         const layoutJSON = await redis.get(KEY_ADMIN_LAYOUT);
