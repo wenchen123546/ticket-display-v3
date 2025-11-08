@@ -1,4 +1,4 @@
-// public/js/login.js (v3.0 / v3.17)
+// public/js/login.js (v3.18 - 對應 v=19)
  
 document.addEventListener("DOMContentLoaded", () => {
     const usernameInput = document.getElementById("username-input");
