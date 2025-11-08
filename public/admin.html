@@ -6,7 +6,7 @@
 <title>後台管理 - 儀表板</title>
 <script src="/socket.io/socket.io.js"></script>
 
-<link rel="stylesheet" href="/css/admin.css?v=10">
+<link rel="stylesheet" href="/css/admin.css?v=11">
 
 <link href="https://cdn.jsdelivr.net/npm/gridstack@9.5.1/dist/gridstack.min.css" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/gridstack@9.5.1/dist/gridstack-all.js"></script>
@@ -56,8 +56,10 @@
                 </div>
                 </div>
             </div>
-            </div>
-    </div> <div class="grid-stack-item" id="card-editor" gs-x="6" gs-y="0" gs-w="6" gs-h="4" gs-min-w="4" gs-min-h="4">
+        </div>
+    </div> 
+
+    <div class="grid-stack-item" id="card-editor" gs-x="6" gs-y="0" gs-w="6" gs-h="4" gs-min-w="4" gs-min-h="4">
         <div class="grid-stack-item-content">
             <div class="admin-card">
                 <h3><span class="card-icon">📝</span> 列表編輯</h3>
@@ -74,7 +76,9 @@
                 </div>
             </div>
         </div>
-    </div> <div class="grid-stack-item" id="card-logs" gs-x="0" gs-y="5" gs-w="6" gs-h="3" gs-min-w="4" gs-min-h="3">
+    </div> 
+    
+    <div class="grid-stack-item" id="card-logs" gs-x="0" gs-y="5" gs-w="6" gs-h="3" gs-min-w="4" gs-min-h="3">
         <div class="grid-stack-item-content">
             <div class="admin-card">
                 <h3><span class="card-icon">📋</span> 即時操作日誌</h3>
@@ -86,7 +90,9 @@
                 </div>
             </div>
         </div>
-    </div> <div class="grid-stack-item" id="card-settings" gs-x="6" gs-y="4" gs-w="6" gs-h="4" gs-min-w="4" gs-min-h="4">
+    </div> 
+
+    <div class="grid-stack-item" id="card-settings" gs-x="6" gs-y="4" gs-w="6" gs-h="4" gs-min-w="4" gs-min-h="4">
         <div class="grid-stack-item-content">
             <div class="admin-card">
                 <h3><span class="card-icon">⚙️</span> 系統設定</h3>
@@ -94,24 +100,35 @@
                     <label for="public-toggle">對外開放前台</label>
                     <input type="checkbox" id="public-toggle">
                 </div>
-                <div class="reset-zone">
-                <div class="control-group button-row">
-                    <button id="resetNumber" type="button" class="btn-reset-single">重置號碼</button>
-                    <button id="resetFeaturedContents" type="button" class="btn-reset-single">重置精選連結</button>
-                    <button id="resetPassed" type="button" class="btn-reset-single">重置過號列表</button>
-                </div>
-                <button id="resetAll" type="button" class="btn-danger">💥 重置所有 (點擊確認)</button>
-                <button id="resetAllConfirm" type="button" class="btn-danger-confirm" style="display:none;">⚠️ 點此確認重置 ⚠️</button>
-                </div>
                 
-                <div class="control-group" style="border-top: 1px solid #eee; margin-top: 20px; padding-top: 20px;">
+                <div class="control-group" style="border-top: 1px solid #eee; margin-top: 20px; padding-top: 10px;">
+                    <label>儀表板控制</label>
+                    <button id="toggle-layout-lock-btn" type="button" class="btn-warn">🔓 解鎖排版</button>
                     <button id="save-layout-btn" type="button" class="btn-secondary">💾 儲存儀表板排版</button>
+                    <a href="/superadmin-panel.html" id="superadmin-link" class="btn-superadmin" style="display:none;">👑 管理用戶</a>
                 </div>
-                
+
+                <div class="reset-zone">
+                    <label>危險區域</label>
+                    <div class="control-group button-row">
+                        <button id="resetNumber" type="button" class="btn-reset-single">重置號碼</button>
+                        <button id="resetFeaturedContents" type="button" class="btn-reset-single">重置精選連結</button>
+                        <button id="resetPassed" type="button" class="btn-reset-single">重置過號列表</button>
+                    </div>
+                    <button id="resetAll" type="button" class="btn-danger">💥 重置所有 (點擊確認)</button>
+                    <button id="resetAllConfirm" type="button" class="btn-danger-confirm" style="display:none;">⚠️ 點此確認重置 ⚠️</button>
+                </div>
+
             </div>
         </div>
-    </div> </div> </div> <div id="toast-notification"></div>
+    </div> 
 
-<script src="/js/admin.js?v=10"></script>
+</div> 
+
+</div> 
+
+<div id="toast-notification"></div>
+
+<script src="/js/admin.js?v=11"></script>
 </body>
 </html>
