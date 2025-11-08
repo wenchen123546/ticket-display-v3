@@ -26,7 +26,7 @@ let resetAllTimer = null;
 let grid = null; 
 let toastTimer = null; 
 let currentUser = null; 
-let isLayoutLocked = true; // 預設為鎖定
+let isLayoutLocked = true; 
 
 // --- 3. Socket.io ---
 const socket = io({ 
@@ -36,28 +36,27 @@ const socket = io({
     }
 });
 
-// --- 4. 【v2 重構】 登入/顯示邏輯 ---
+// --- 4. 【v2.3 修正】 登入/顯示邏輯 ---
 
 document.addEventListener("DOMContentLoaded", () => {
-    // 【需求 2 修正】 讀取後立刻銷毀 Token，強制重整時需重登
-    token = localStorage.getItem("jwtToken");
-    localStorage.removeItem("jwtToken"); // <-- 關鍵！
-    sessionStorage.removeItem("jwtToken"); // (順便清除 session)
+    // 【v2.3 修正】 從 sessionStorage 讀取
+    token = sessionStorage.getItem("jwtToken");
+    // 【v2.3 修正】 移除 removeItem (不再需要)
+    // localStorage.removeItem("jwtToken"); 
 
     if (!token) {
-        // 1. 沒有 Token (因為剛開啟，或按了 F5) -> 強制轉跳到 v2 登入頁面
+        // (保持不變) 
         alert("您尚未登入或登入已逾時。");
-        window.location.href = "/login.html"; // 轉到新的登入頁
+        window.location.href = "/login.html"; 
         return;
     }
 
-    // 2. 解碼 Token 以取得用戶資訊
     try {
         currentUser = JSON.parse(atob(token.split('.')[1]));
         console.log("已登入用戶:", currentUser);
     } catch (e) {
-        // 3. Token 格式錯誤 -> 登出
         alert("Token 格式錯誤，請重新登入。");
+        sessionStorage.removeItem("jwtToken"); // 【v2.3 修正】
         window.location.href = "/login.html";
         return;
     }
@@ -99,7 +98,6 @@ async function showPanel() {
             float: true,      
             removable: false,   
             alwaysShowResizeHandle: 'mobile',
-            // 【需求 1 修正】 預設禁用拖移和縮放
             disableDrag: true,
             disableResize: true,
         });
@@ -108,12 +106,10 @@ async function showPanel() {
             grid.load(savedLayout);
         }
         
-        // (移除 grid.disable()，因為已在 init 中設定)
-        
     }, 100); 
 }
 
-// --- 5. 【v2 重構】 Toast 通知函式 ---
+// --- 5. Toast 通知函式 ---
 function showToast(message, type = 'info') {
     const toast = document.getElementById("toast-notification");
     if (!toast) return;
@@ -140,7 +136,7 @@ socket.on("disconnect", () => {
 socket.on("connect_error", (err) => {
     console.error("Socket 連線失敗:", err.message);
     alert("Socket 驗證失敗，您的登入可能已過期，請重新登入。");
-    // (移除 localStorage.removeItem，因為 DOMContentLoaded 已經做過了)
+    sessionStorage.removeItem("jwtToken"); // 【v2.3 修正】
     window.location.href = "/login.html";
 });
 socket.on("initAdminLogs", (logs) => {
@@ -175,7 +171,7 @@ socket.on("updatePublicStatus", (isPublic) => { publicToggle.checked = isPublic;
 socket.on("updateTimestamp", (timestamp) => { console.log("Timestamp updated:", timestamp); });
 
 
-// --- 7. 【v2 重構】 API 請求函式 ---
+// --- 7. API 請求函式 ---
 async function apiRequest(endpoint, body = {}, a_returnResponse = false) {
     try {
         const res = await fetch(endpoint, {
@@ -187,12 +183,11 @@ async function apiRequest(endpoint, body = {}, a_returnResponse = false) {
             body: JSON.stringify(body), 
         });
         
-        // 【需求 2 修正】 如果 Token 過期，立刻跳轉
         if (res.status === 401 || res.status === 403) {
             alert("權限不足或登入已過期，請重新登入。");
-            // (移除 localStorage.removeItem)
+            sessionStorage.removeItem("jwtToken"); // 【v2.3 修正】
             window.location.href = "/login.html";
-            return false; // 中斷請求
+            return false; 
         }
         
         const responseData = await res.json(); 
@@ -406,7 +401,7 @@ publicToggle.addEventListener("change", () => {
     apiRequest("/set-public-status", { isPublic: isPublic });
 });
 
-// --- 13. 【v2 修改】 綁定 GridStack 控制按鈕 ---
+// --- 13. 綁定 GridStack 控制按鈕 ---
 if (saveLayoutBtn) {
     saveLayoutBtn.addEventListener("click", async () => {
         if (!grid) return;
@@ -426,7 +421,6 @@ if (saveLayoutBtn) {
         
         if (success) {
             showToast("✅ 排版已成功儲存！", "success");
-            // 【需求 1 修正】 儲存後自動鎖定
             if (!isLayoutLocked) {
                 grid.enableMove(false);
                 grid.enableResize(false);
@@ -437,7 +431,6 @@ if (saveLayoutBtn) {
     });
 }
 
-// 【需求 1 修正】 綁定鎖定/解鎖按鈕
 if (toggleLayoutLockBtn) {
     toggleLayoutLockBtn.addEventListener("click", () => {
         if (!grid) return;
