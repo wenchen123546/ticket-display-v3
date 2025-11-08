@@ -4,8 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>超級管理員面板</title>
-<link rel="stylesheet" href="/css/admin.css?v=7">
-<style>
+<link rel="stylesheet" href="/css/admin.css?v=8"> <style>
     /* 針對此頁面的一些微調 */
     body { padding-top: 30px; }
     #panel-container { max-width: 900px; margin: 0 auto; }
@@ -18,8 +17,13 @@
         border-radius: 6px;
         margin-bottom: 10px;
         background: #fff;
+        flex-wrap: wrap; /* 手機版換行 */
     }
-    .user-info { font-size: 1.1rem; }
+    .user-info { 
+        font-size: 1.1rem; 
+        font-weight: bold;
+        margin-right: 15px; /* 與按鈕區隔開 */
+    }
     .user-info span {
         display: inline-block;
         padding: 4px 8px;
@@ -27,9 +31,22 @@
         background: #eee;
         font-size: 0.9rem;
         margin-left: 10px;
+        font-weight: normal;
     }
     .user-info .role-superadmin { background: var(--color-danger); color: white; }
     .user-info .role-admin { background: var(--color-secondary); color: white; }
+    
+    /* 【v2.2 新增】 按鈕容器 */
+    .user-list-controls {
+        display: flex;
+        gap: 10px; /* 按鈕間距 */
+    }
+    .user-list-controls button {
+        width: auto;
+        min-width: 80px;
+        font-size: 0.9rem;
+        margin: 0; /* 移除預設的 margin */
+    }
 </style>
 </head>
 <body>
@@ -76,6 +93,5 @@
     </div>
 </div>
 
-<script src="/js/superadmin-panel.js"></script>
-</body>
+<script src="/js/superadmin-panel.js?v=2"></script> </body>
 </html>
