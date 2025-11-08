@@ -1,7 +1,7 @@
-// public/js/admin.js (v3.9 修改版)
+// public/js/admin.js (v3.12 修改版)
 
 // --- 1. 元素節點 (DOM) ---
-// ... (與 v3.8 相同)
+// ... (與 v3.9 相同)
 const adminPanel = document.getElementById("admin-panel");
 const numberEl = document.getElementById("number");
 const statusBar = document.getElementById("status-bar");
@@ -38,7 +38,7 @@ const socket = io({
     autoConnect: false
 });
  
-// --- 4. 登入/顯示邏輯 (不變) ---
+// --- 4. 登入/顯示邏輯 (v3.9, 不變) ---
 document.addEventListener("DOMContentLoaded", () => {
     const userString = sessionStorage.getItem("currentUser");
  
@@ -62,7 +62,7 @@ document.addEventListener("DOMContentLoaded", () => {
     showPanel();
 });
  
-// --- showPanel (v3.9 修改 GridStack.init) ---
+// --- showPanel (v3.9, 不變) ---
 async function showPanel() {
     adminPanel.style.display = "block";
     document.title = "後台管理 - 控制台";
@@ -105,12 +105,8 @@ async function showPanel() {
             alwaysShowResizeHandle: 'mobile',
             disableDrag: true,
             disableResize: true,
-            
-            // --- 【v3.9 RWD 修復】 ---
-            // 新增此選項，告訴 GridStack 何時切換到單欄模式
             oneColumnMode: 'auto',
-            oneColumnModeBreakpoint: 768 // 必須匹配 CSS 中的 768px
-            // ---
+            oneColumnModeBreakpoint: 768
         });
         
         if (savedLayout) {
@@ -395,7 +391,7 @@ async function clearAdminLog() {
     }
 }
  
-// --- 10. 綁定按鈕事件 (v3.3, 不變) ---
+// --- 10. 綁定按鈕事件 ---
 document.getElementById("next").onclick = () => changeNumber("next");
 document.getElementById("prev").onclick = () => changeNumber("prev");
 document.getElementById("setNumber").onclick = setNumber;
@@ -404,7 +400,10 @@ document.getElementById("resetFeaturedContents").onclick = resetFeaturedContents
 document.getElementById("resetPassed").onclick = resetPassed_fixed;
 resetAllBtn.onclick = requestResetAll;
 resetAllConfirmBtn.onclick = confirmResetAll;
-clearLogBtn.onclick = clearLogBtn; 
+
+// 【v3.12 Bug 修復】
+clearLogBtn.onclick = clearAdminLog; // 修正錯字 (clearLogBtn -> clearAdminLog)
+
 if (logoutButton) {
     logoutButton.addEventListener("click", () => {
         if (confirm("確定要登出嗎？")) {
