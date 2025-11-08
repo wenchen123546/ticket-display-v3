@@ -2,10 +2,10 @@
  * ==========================================
  * 伺服器 (index.js)
  * ... (舊註解) ...
- * * 13. 【v2.2 功能】
- * * - 新增「超級管理員修改用戶密碼」的 API
  * * 14. 【v2.3 需求】
  * * - 移除 update-password API 的 8 字元密碼長度限制
+ * * 15. 【v2.4 改善】
+ * * - (建議 1) 自動修剪「已過號」列表，只保留 20 筆
  * ==========================================
  */
 
@@ -138,7 +138,8 @@ async function updateTimestamp() {
 }
 async function broadcastPassedNumbers() {
     try {
-        const numbersRaw = await redis.zrange(KEY_PASSED_NUMBERS, 0, -1);
+        // 【v2.4 修正】 讀取時也限制 20 筆 (雖然 add 已修剪，但這是雙重保險)
+        const numbersRaw = await redis.zrange(KEY_PASSED_NUMBERS, -20, -1);
         const numbers = numbersRaw.map(Number);
         io.emit("updatePassed", numbers);
         await updateTimestamp();
@@ -281,7 +282,13 @@ app.post("/api/passed/add", async (req, res) => {
             return res.status(400).json({ error: "請提供有效的正整數。" });
         }
         await redis.zadd(KEY_PASSED_NUMBERS, num, num);
-        await redis.zremrangebyrank(KEY_PASSED_NUMBERS, 0, -21); 
+        
+        // --- 【v2.4 改善】 自動修剪，只保留最新的 20 筆 ---
+        // zremrangebyrank 會移除「排名」在 0 到 -21 之間的成員
+        // (ZSET 預設由小到大排，-1 是最大的，-21 是倒數第 21 大的)
+        await redis.zremrangebyrank(KEY_PASSED_NUMBERS, 0, -21); // (保留 20 筆)
+        // --- 【改善結束】 ---
+        
         await addAdminLog(`過號列表新增 ${num}`, req.user.username); 
         await broadcastPassedNumbers();
         res.json({ success: true });
@@ -473,7 +480,6 @@ app.post("/api/admin/users/create", async (req, res) => {
             return res.status(400).json({ error: "無效的角色。" });
         }
         
-        // 【v2.3 修正】 允許中文，不再使用 .toLowerCase()
         const targetUsername = username.trim();
         if (targetUsername.length === 0) {
              return res.status(400).json({ error: "帳號不可為空白。" });
@@ -504,7 +510,7 @@ app.post("/api/admin/users/create", async (req, res) => {
 app.post("/api/admin/users/delete", async (req, res) => {
     try {
         const { username } = req.body;
-        const targetUsername = username; // 【v2.3 修正】 不再 .toLowerCase()
+        const targetUsername = username; 
 
         if (targetUsername === req.user.username) {
             return res.status(400).json({ error: "無法刪除您自己的帳號。" });
@@ -530,10 +536,7 @@ app.post("/api/admin/users/update-password", async (req, res) => {
             return res.status(400).json({ error: "帳號和新密碼為必填。" });
         }
         
-        // 【v2.3 修正】 移除 8 字元限制
-        // if (newPassword.length < 8) { ... }
-
-        const targetUsername = username; // 【v2.3 修正】 不再 .toLowerCase()
+        const targetUsername = username; 
         
         const userJSON = await redis.hget(KEY_USERS_HASH, targetUsername);
         if (!userJSON) {
@@ -572,7 +575,7 @@ io.on("connection", async (socket) => {
         try {
             const pipeline = redis.multi();
             pipeline.get(KEY_CURRENT_NUMBER);
-            pipeline.zrange(KEY_PASSED_NUMBERS, 0, -1);
+            pipeline.zrange(KEY_PASSED_NUMBERS, -20, -1); // 【v2.4 修正】
             pipeline.lrange(KEY_FEATURED_CONTENTS, 0, -1);
             pipeline.get(KEY_LAST_UPDATED);
             pipeline.get(KEY_SOUND_ENABLED);
@@ -609,7 +612,7 @@ io.on("connection", async (socket) => {
     try {
         const pipeline = redis.multi();
         pipeline.get(KEY_CURRENT_NUMBER);
-        pipeline.zrange(KEY_PASSED_NUMBERS, 0, -1);
+        pipeline.zrange(KEY_PASSED_NUMBERS, -20, -1); // 【v2.4 修正】
         pipeline.lrange(KEY_FEATURED_CONTENTS, 0, -1);
         pipeline.get(KEY_LAST_UPDATED);
         pipeline.get(KEY_SOUND_ENABLED);
@@ -635,7 +638,6 @@ io.on("connection", async (socket) => {
 
 async function createSuperAdminOnStartup() {
     try {
-        // 【v2.3 修正】 允許中文，不再 .toLowerCase()
         const username = SUPER_ADMIN_USERNAME.trim();
         const userJSON = await redis.hget(KEY_USERS_HASH, username);
 
