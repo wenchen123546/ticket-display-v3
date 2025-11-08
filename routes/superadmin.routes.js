@@ -5,7 +5,6 @@ const { redis } = require('../config/redis');
 const { KEY_USERS_HASH, KEY_ADMIN_LAYOUT } = require('../socket/constants');
 const { addAdminLog } = require('./routeHelpers');
  
-// ... (list, create, delete, update-password 路由不變) ...
 router.post("/users/list", async (req, res) => {
     const userHash = await redis.hgetall(KEY_USERS_HASH);
     const users = Object.values(userHash).map(u => {
@@ -32,9 +31,12 @@ router.post("/users/create", async (req, res) => {
          return res.status(400).json({ error: "帳號不可為空白。" });
     }
     
+    // 【v3.11 移除】 密碼長度 8 字元限制
+    /*
     if (password.trim().length < 8) {
         return res.status(400).json({ error: "密碼長度至少需要 8 個字元。" });
     }
+    */
 
     if (await redis.hexists(KEY_USERS_HASH, targetUsername)) {
         return res.status(409).json({ error: "此帳號名稱已存在。" });
@@ -80,9 +82,12 @@ router.post("/users/update-password", async (req, res) => {
         return res.status(400).json({ error: "帳號和新密碼為必填。" });
     }
     
+    // 【v3.11 移除】 密碼長度 8 字元限制
+    /*
     if (newPassword.trim().length < 8) {
         return res.status(400).json({ error: "密碼長度至少需要 8 個字元。" });
     }
+    */
     
     const targetUsername = username.trim().toLowerCase(); 
     const userJSON = await redis.hget(KEY_USERS_HASH, targetUsername);
@@ -102,7 +107,6 @@ router.post("/users/update-password", async (req, res) => {
     res.json({ success: true, message: `用戶 ${targetUsername} 的密碼已更新。` });
 });
 
-// --- 【v3.2】 新增：變更用戶角色 ---
 router.post("/users/update-role", async (req, res) => {
     const { username, newRole } = req.body;
     const io = req.app.get('socketio');
@@ -117,7 +121,6 @@ router.post("/users/update-role", async (req, res) => {
 
     const targetUsername = username.trim().toLowerCase(); 
 
-    // 關鍵安全檢查：不允許超級管理員修改自己的角色
     if (targetUsername === req.user.username) {
         return res.status(403).json({ error: "無法修改您自己的角色。" });
     }
@@ -137,7 +140,6 @@ router.post("/users/update-role", async (req, res) => {
 });
 
 
-// --- Layout 路由 (v3.1) ---
 router.post("/layout/load", async (req, res) => {
     const layoutJSON = await redis.get(KEY_ADMIN_LAYOUT);
     if (layoutJSON) {
