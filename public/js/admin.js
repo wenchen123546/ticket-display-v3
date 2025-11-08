@@ -42,14 +42,12 @@ function showLogin() {
     socket.disconnect();
 }
 
-// 【修改】 showPanel 函式，改為 async
 async function showPanel() {
     loginContainer.style.display = "none";
     adminPanel.style.display = "block";
     document.title = "後台管理 - 控制台";
     socket.connect();
 
-    // 【新】 在初始化 GridStack 之前，先載入儲存的排版
     let savedLayout = null;
     try {
         adminLog("正在讀取儀表板排版...");
@@ -64,7 +62,6 @@ async function showPanel() {
         adminLog(`❌ 讀取排版失敗: ${e.message}`);
     }
 
-    // 延遲 100ms 確保元素已渲染
     setTimeout(() => {
         grid = GridStack.init({
             column: 12, 
@@ -76,7 +73,6 @@ async function showPanel() {
             alwaysShowResizeHandle: 'mobile' 
         });
         
-        // 【新】 如果有儲存的排版，就載入它
         if (savedLayout) {
             grid.load(savedLayout);
         }
@@ -103,7 +99,7 @@ async function attemptLogin(tokenToCheck) {
     if (isValid) {
         token = tokenToCheck;
         socket.auth.token = tokenToCheck;
-        await showPanel(); // <-- GridStack 會在這裡被初始化
+        await showPanel(); 
     } else {
         loginError.textContent = "密碼錯誤";
         showLogin();
@@ -131,7 +127,6 @@ function adminLog(message) {
 socket.on("connect", () => {
     console.log("Socket.io 已連接");
     statusBar.classList.remove("visible");
-    // (移除這裡的 "成功連線" 日誌，改由 showPanel 載入排版後顯示)
 });
 socket.on("disconnect", () => {
     console.warn("Socket.io 已斷線");
@@ -173,7 +168,6 @@ socket.on("updateTimestamp", (timestamp) => {
 });
 
 // --- 7. API 請求函式 ---
-// 【修改】 增加 a_returnResponse 參數以處理回傳資料
 async function apiRequest(endpoint, body, a_returnResponse = false) {
     try {
         const res = await fetch(endpoint, {
@@ -182,7 +176,7 @@ async function apiRequest(endpoint, body, a_returnResponse = false) {
             body: JSON.stringify({ ...body, token }),
         });
         
-        const responseData = await res.json(); // 先解析 JSON
+        const responseData = await res.json(); 
 
         if (!res.ok) {
             if (res.status === 403) {
@@ -195,12 +189,11 @@ async function apiRequest(endpoint, body, a_returnResponse = false) {
             return false;
         }
 
-        // 如果請求成功
         if (a_returnResponse) {
-            return responseData; // 回傳完整的 JSON 資料
+            return responseData; 
         }
         
-        return true; // 預設回傳 true
+        return true; 
     } catch (err) {
         adminLog(`❌ 網路連線失敗: ${err.message}`);
         alert("網路連線失敗或伺服器無回應：" + err.message);
@@ -232,19 +225,47 @@ function renderPassedListUI(numbers) {
     });
     passedListUI.appendChild(fragment);
 }
+
+//
+// --- 【XSS 安全修正】 vvv
+//
 function renderFeaturedListUI(contents) {
     featuredListUI.innerHTML = "";
     if (!Array.isArray(contents)) return;
+    
     const fragment = document.createDocumentFragment();
+    
     contents.forEach((item) => {
         const li = document.createElement("li");
-        li.innerHTML = `<span>${item.linkText}<br><small style="color: #666;">${item.linkUrl}</small></span>`;
+        
+        // --- 【安全修正】 ---
+        // 1. 建立 span (用於 linkText)
+        const span = document.createElement("span");
+        
+        // 2. 建立 linkText 節點並使用 .textContent (防止 XSS)
+        const textNode = document.createTextNode(item.linkText);
+        span.appendChild(textNode);
+        
+        // 3. 建立 br 換行
+        span.appendChild(document.createElement("br"));
+        
+        // 4. 建立 small (用於 linkUrl)
+        const small = document.createElement("small");
+        small.style.color = "#666";
+        small.textContent = item.linkUrl; // .textContent 是安全的
+        span.appendChild(small);
+        
+        li.appendChild(span);
+        // --- 【修正結束】 ---
+
         const deleteBtn = document.createElement("button");
         deleteBtn.type = "button";
         deleteBtn.className = "delete-item-btn";
         deleteBtn.textContent = "×";
+        
         deleteBtn.onclick = async () => {
-            if (confirm(`確定要刪除連結 ${item.linkText} 嗎？`)) {
+            // 詢問時也使用 textContent 來顯示，避免 alert XSS
+            if (confirm(`確定要刪除連結 ${item.linkText} 嗎？`)) { 
                 deleteBtn.disabled = true;
                 adminLog(`正在刪除連結 ${item.linkText}...`);
                 await apiRequest("/api/featured/remove", {
@@ -258,6 +279,9 @@ function renderFeaturedListUI(contents) {
     });
     featuredListUI.appendChild(fragment);
 }
+//
+// --- 【XSS 安全修正】 ^^^
+//
 
 // --- 9. 控制台按鈕功能 ---
 async function changeNumber(direction) {
@@ -314,7 +338,6 @@ async function confirmResetAll() {
         document.getElementById("manualNumber").value = "";
         alert("已全部重置。");
         adminLog("✅ 所有資料已重置");
-        // 重置後強制重載頁面，以載入預設排版
         location.reload();
     } else {
         adminLog("❌ 重置失敗");
@@ -403,14 +426,11 @@ publicToggle.addEventListener("change", () => {
     apiRequest("/set-public-status", { isPublic: isPublic });
 });
 
-// --- 13. 【修改】 綁定 GridStack 儲存按鈕 ---
+// --- 13. 【新】 綁定 GridStack 儲存按鈕 ---
 if (saveLayoutBtn) {
     saveLayoutBtn.addEventListener("click", async () => {
         if (!grid) return;
         
-        // 儲存目前的排版
-        // 我們使用 grid.save(true) 來只儲存卡片 (不含內容)
-        // 並使用 map 來確保我們只儲存必要的資訊 (id, x, y, w, h)
         const layoutData = grid.save(false).map(item => ({
             id: item.id,
             x: item.x, 
@@ -422,7 +442,6 @@ if (saveLayoutBtn) {
         adminLog("正在儲存排版到 Redis...");
         console.log("正在儲存:", JSON.stringify(layoutData, null, 2));
 
-        // 呼叫新的 API 來儲存
         const success = await apiRequest("/api/layout/save", { layout: layoutData });
         
         if (success) {
