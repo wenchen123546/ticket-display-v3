@@ -1,5 +1,5 @@
 /* --- 1. 基礎 & 登入頁 --- */
-
+ 
 :root {
     --color-text: #333;
     --color-bg: #f0f4f8;
@@ -19,7 +19,7 @@
     --color-log-text: #e2e8f0;
     --color-log-border: #4a5568;
 }
-
+ 
 body { 
     font-family: "Microsoft JhengHei", sans-serif; 
     text-align: center; 
@@ -28,7 +28,7 @@ body {
     padding: 20px; 
     padding-top: 30px; 
 }
-
+ 
 .sr-only {
     position: absolute;
     width: 1px;
@@ -40,7 +40,7 @@ body {
     white-space: nowrap;
     border-width: 0;
 }
-
+ 
 #login-container { 
     max-width: 400px; 
     width: 90%; 
@@ -53,7 +53,7 @@ body {
 }
 #login-container h1 { 
     font-size: 2.2rem; 
-    color: var(--color-danger); 
+    color: var(--color-text); /* (v3.14) 登入頁標題改為中性色 */
     margin-top: 0; 
     margin-bottom: 25px; 
 }
@@ -79,9 +79,9 @@ body {
 }
 #login-container button:hover { opacity: 0.9; }
 #login-error { color: var(--color-danger); margin-top: 15px; height: 1.2rem; }
-
+ 
 /* --- 2. 【GridStack】 卡片佈局 --- */
-
+ 
 #admin-panel { 
     padding-top: 0; 
     max-width: 1200px; 
@@ -89,13 +89,13 @@ body {
 }
 #admin-panel h1 { font-size: 3rem; color: var(--color-danger); margin-bottom: 30px; }
 #number { font-size: 5rem; color: var(--color-primary); margin: 20px 0; }
-
+ 
 .grid-stack-item-content {
     background: var(--color-bg-light);
     border-radius: 10px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
-
+ 
 .grid-stack-item-content .admin-card {
     padding: 20px;
     text-align: left; 
@@ -104,7 +104,7 @@ body {
     display: flex;
     flex-direction: column; 
 }
-
+ 
 .admin-card h3 {
     display: flex;
     align-items: center;
@@ -121,7 +121,7 @@ body {
     font-size: 1.2rem;
     margin-right: 10px;
 }
-
+ 
 .admin-card .control-group { 
     margin-bottom: 20px; 
     display: flex; 
@@ -132,13 +132,13 @@ body {
 .admin-card .control-group:last-child {
     margin-bottom: 0;
 }
-
+ 
 .control-group.button-row { 
     flex-direction: row; 
     justify-content: center; 
     flex-wrap: wrap; 
 }
-
+ 
 .control-group label { 
     display: block; 
     font-size: 1.1rem; 
@@ -147,9 +147,9 @@ body {
     font-weight: bold; 
     text-align: center; 
 }
-
+ 
 /* --- 3. 按鈕 & 輸入框 --- */
-
+ 
 button,
 a.btn-superadmin { 
     font-size: 1.2rem; 
@@ -171,7 +171,7 @@ button:disabled { background-color: #999; cursor: not-allowed; opacity: 0.7; }
     min-width: 120px; 
     flex-grow: 1; 
 }
-
+ 
 input, textarea { 
     font-size: 1.2rem; 
     padding: 8px; 
@@ -183,9 +183,9 @@ input, textarea {
     box-sizing: border-box; 
 }
 textarea { height: 80px; text-align: left; padding: 10px; }
-
+ 
 /* --- 4. 列表編輯器 GUI --- */
-
+ 
 .list-editor { 
     border: 1px solid var(--color-border); 
     border-radius: 8px; 
@@ -195,7 +195,7 @@ textarea { height: 80px; text-align: left; padding: 10px; }
     box-sizing: border-box; 
     text-align: center; 
 }
-
+ 
 .list-editor ul { 
     list-style: none; 
     padding: 0; 
@@ -205,7 +205,7 @@ textarea { height: 80px; text-align: left; padding: 10px; }
     overflow-y: auto;  
     padding-right: 5px; 
 }
-
+ 
 .list-editor li { 
     display: flex; 
     justify-content: space-between; 
@@ -251,9 +251,9 @@ textarea { height: 80px; text-align: left; padding: 10px; }
     flex-shrink: 0; 
     width: 40px !important; 
 }
-
-/* --- 5. 【B. 改善】按鈕顏色 (使用 Class) --- */
-
+ 
+/* --- 5. 按鈕顏色 --- */
+ 
 .btn-primary { background-color: var(--color-primary); }
 .btn-success { background-color: var(--color-success); }
 .btn-warn { background-color: var(--color-warning); }
@@ -263,15 +263,14 @@ textarea { height: 80px; text-align: left; padding: 10px; }
 .btn-cyan { background-color: var(--color-cyan); }
 .btn-add { background-color: var(--color-success); }
 .btn-superadmin { background-color: var(--color-superadmin); } 
-
+ 
 #prev { background-color: var(--color-warning); }
 #next { background-color: var(--color-success); }
 #setNumber { background-color: var(--color-primary); }
-#savePassedNumbers { background-color: var(--color-cyan); }
-#saveFeaturedContents { background-color: var(--color-secondary); } 
 
+ 
 /* --- 6. 重置區域 --- */
-
+ 
 .reset-zone { margin-top: 20px; padding-top: 10px; border-top: 1px solid #eee; width: 100%; text-align: center; }
 .reset-zone .btn-reset-single { 
     background-color: var(--color-warning); 
@@ -279,52 +278,43 @@ textarea { height: 80px; text-align: left; padding: 10px; }
     padding: 8px 15px; 
     width: auto; 
 }
-#resetAll { 
-    width: 100%; 
-}
-#resetAllConfirm { 
-    width: 100%; 
-}
-
+#resetAll { width: 100%; }
+#resetAllConfirm { width: 100%; }
+ 
 /* --- 7. RWD --- */
-
+ 
 @media (max-width: 768px) { 
     body { 
         padding: 10px; 
         padding-top: 30px; 
-    }
+     }
     .admin-card {
         padding: 15px; 
-    }
+     }
     #login-container { margin: 30px auto; padding: 20px; } 
     #admin-panel h1 { font-size: 2.2rem; } 
     #number { font-size: 4rem; } 
     .list-editor { padding: 10px; } 
-    
-    /* * --- 【RWD 修正 v3】 GridStack 手機版高度修正 ---
-     * 這是更強硬的修正，強制移除 GridStack 的 JS 計算高度，
-     * 並讓卡片恢復正常的文檔流 (static) 堆疊。
-     */
+     
+    /* --- 【RWD 修正 v3】 (關鍵修復) --- */
     .grid-stack-one-column-mode .grid-stack-item {
-        /* 關鍵：移除 GridStack 的 JS 計算高度和 Y 軸定位 */
         height: auto !important; 
-        position: relative !important; /* 改回 relative (Gridstack 預設) */
-        top: auto !important; /* 移除 JS 計算的 top */
-        left: 0 !important; /* 確保 x 軸歸零 */
-        width: 100% !important; /* 確保 100% 寬 */
-        margin-bottom: 20px !important; /* 增加卡片間的垂直間距 */
-    }
+        position: relative !important; 
+        top: auto !important; 
+        left: 0 !important; 
+        width: 100% !important; 
+        margin-bottom: 20px !important; 
+     }
     .grid-stack-one-column-mode .grid-stack-item-content,
     .grid-stack-one-column-mode .admin-card {
-        /* 關鍵：讓卡片內部也自動撐開 */
         height: auto !important;
-        min-height: 200px; /* 給個最小高度, 避免空卡片 */
+        min-height: 200px; 
         position: relative !important;
-    }
+     }
 }
-
+ 
 /* --- 8. 連線狀態提示條 --- */
-
+ 
 #status-bar { 
     position: fixed; 
     top: 0; 
@@ -340,9 +330,9 @@ textarea { height: 80px; text-align: left; padding: 10px; }
     transition: transform 0.3s ease; 
 }
 #status-bar.visible { transform: translateY(0); }
-
-/* --- 9. 音效開關 (移到 Card 內部) --- */
-
+ 
+/* --- 9. 音效 & 系統開關 --- */
+ 
 .control-group.sound-toggle-group,
 .control-group.system-toggle-group { 
     flex-direction: row; 
@@ -356,28 +346,25 @@ textarea { height: 80px; text-align: left; padding: 10px; }
     box-sizing: border-box; 
     margin-bottom: 20px; 
 }
-
 .sound-toggle-group label,
 .system-toggle-group label { 
     margin-bottom: 0; 
     display: inline; 
 }
-
 .sound-toggle-group input[type="checkbox"],
 .system-toggle-group input[type="checkbox"] { 
     margin-top: 0;  
     width: auto;    
 }
-
+ 
 /* --- 10. 管理員日誌樣式 --- */
-
+ 
 .admin-log-container { 
     max-width: 100%; 
     flex-grow: 1; 
     display: flex;
     flex-direction: column;
 }
-
 #admin-log-ui { 
     list-style: none; 
     padding: 10px; 
@@ -396,9 +383,9 @@ textarea { height: 80px; text-align: left; padding: 10px; }
 }
 #admin-log-ui li { padding-bottom: 3px; margin-bottom: 3px; border-bottom: 1px solid var(--color-log-border); }
 #admin-log-ui li:first-child { color: var(--color-success); font-weight: bold; }
-
+ 
 /* --- 11. 日誌清除按鈕 --- */
-
+ 
 .admin-log-container .btn-clear-log {
     width: 100%; 
     padding: 5px 12px;
@@ -408,14 +395,14 @@ textarea { height: 80px; text-align: left; padding: 10px; }
     flex-shrink: 0; 
 }
 .admin-log-container .btn-clear-log:hover { opacity: 0.9; }
-
+ 
 /* --- 12. 主要號碼控制按鈕的樣式 --- */
 #main-number-controls {
     margin-top: -20px; 
     margin-bottom: 30px; 
 }
-
-/* --- 13. 【新功能】 Toast 通知 --- */
+ 
+/* --- 13. Toast 通知 --- */
 #toast-notification {
     position: fixed;
     top: 20px;
@@ -431,15 +418,47 @@ textarea { height: 80px; text-align: left; padding: 10px; }
     transition: opacity 0.3s ease, transform 0.3s ease;
     pointer-events: none; 
 }
-#toast-notification.show {
-    opacity: 1;
-    transform: translateY(0);
+#toast-notification.show { opacity: 1; transform: translateY(0); }
+#toast-notification.success { background: var(--color-success); color: white; }
+#toast-notification.error { background: var(--color-danger); color: white; }
+
+/* --- 14. 【v3.8】 在線管理員列表 --- */
+.online-admin-container {
+    max-width: 100%; 
+    flex-grow: 1; 
+    display: flex;
+    flex-direction: column;
 }
-#toast-notification.success {
-    background: var(--color-success);
-    color: white;
+#online-admin-list {
+    list-style: none; 
+    padding: 10px; 
+    margin: 0; 
+    width: 100%; 
+    height: 150px; 
+    flex-grow: 1; 
+    overflow-y: auto; 
+    background: var(--color-log-bg); 
+    color: var(--color-log-text); 
+    border-radius: 6px; 
+    text-align: left; 
+    font-family: "Consolas", "Monaco", monospace; 
+    font-size: 0.9rem; 
+    box-sizing: border-box; 
 }
-#toast-notification.error {
-    background: var(--color-danger);
-    color: white;
+#online-admin-list li {
+    padding-bottom: 3px;
+    margin-bottom: 3px;
+    border-bottom: 1px solid var(--color-log-border); 
+}
+#online-admin-list li.empty-state {
+    color: var(--color-neutral);
+    font-style: italic;
+    border-bottom: none;
+}
+#online-admin-list .role-superadmin {
+    color: var(--color-danger-light);
+    font-weight: bold;
+}
+#online-admin-list .role-admin {
+    color: var(--color-secondary);
 }
