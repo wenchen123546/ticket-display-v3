@@ -1,7 +1,11 @@
 // public/js/superadmin-panel.js
 
 document.addEventListener("DOMContentLoaded", () => {
+    // 【需求 2 修正】 讀取後立刻銷毀 Token
     const token = localStorage.getItem("jwtToken");
+    localStorage.removeItem("jwtToken"); // <-- 關鍵！
+    sessionStorage.removeItem("jwtToken"); // (順便清除 session)
+
     const welcomeMessage = document.getElementById("welcome-message");
     const userListContainer = document.getElementById("user-list-container");
     const logoutButton = document.getElementById("logout-button");
@@ -17,8 +21,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- 1. 驗證與 API 請求 ---
 
     if (!token) {
-        alert("您尚未登入，將轉跳至登入頁面。");
-        window.location.href = "/login.html"; // 改為統一登入頁
+        alert("您尚未登入或登入已逾時。");
+        window.location.href = "/login.html"; 
         return;
     }
 
@@ -27,7 +31,6 @@ document.addEventListener("DOMContentLoaded", () => {
         currentUser = payload;
         welcomeMessage.textContent = `歡迎， ${currentUser.username} (${currentUser.role})！`;
 
-        // 【v2.2 修正】 如果不是 Super Admin，踢回儀表板
         if (currentUser.role !== 'superadmin') {
             alert("權限不足。您將被導向回主儀表板。");
             window.location.href = "/admin.html";
@@ -36,14 +39,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     } catch (e) {
         console.error("解碼 Token 失敗:", e);
-        localStorage.removeItem("jwtToken");
+        // (移除 localStorage.removeItem，因為上面已經做過了)
         window.location.href = "/login.html";
         return;
     }
 
     logoutButton.addEventListener("click", () => {
         if (confirm("確定要登出嗎？")) {
-            localStorage.removeItem("jwtToken");
+            // (移除 localStorage.removeItem，因為 token 已經不在了)
             window.location.href = "/login.html";
         }
     });
@@ -51,7 +54,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const apiRequest = async (endpoint, method = "POST", body = null) => {
         const headers = {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}` 
+            "Authorization": `Bearer ${token}` // 使用記憶體中的 Token
         };
 
         const config = { method, headers };
@@ -63,8 +66,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const data = await res.json();
 
         if (!res.ok) {
-            if (res.status === 401) {
-                localStorage.removeItem("jwtToken");
+            if (res.status === 401 || res.status === 403) {
+                // (移除 localStorage.removeItem)
                 alert("您的登入已過期，請重新登入。");
                 window.location.href = "/login.html";
             }
@@ -97,13 +100,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
             item.appendChild(info);
 
-            // 【v2.2 新增】 按鈕容器
             const controls = document.createElement("div");
             controls.className = "user-list-controls";
 
-            // 超級管理員不能刪除自己
             if (user.username !== currentUser.username) {
-                // 【v2.2 新增】 改密碼按鈕
                 const changePwdButton = document.createElement("button");
                 changePwdButton.type = "button";
                 changePwdButton.className = "btn-secondary";
@@ -111,7 +111,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 changePwdButton.onclick = () => updatePassword(user.username);
                 controls.appendChild(changePwdButton);
                 
-                // 刪除按鈕
                 const deleteButton = document.createElement("button");
                 deleteButton.type = "button";
                 deleteButton.className = "btn-danger";
@@ -136,12 +135,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // --- 3. 刪除/修改用戶 ---
 
-    // 【v2.2 新增】 修改密碼
     const updatePassword = async (username) => {
         const newPassword = prompt(`請為用戶 "${username}" 輸入一個新密碼：\n(至少 8 個字元)`);
 
         if (!newPassword) {
-            return; // User cancelled
+            return; 
         }
         if (newPassword.length < 8) {
             alert("密碼長度至少需 8 個字元。");
@@ -164,7 +162,7 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             await apiRequest("/api/admin/users/delete", "POST", { username });
             alert(`用戶 ${username} 已成功刪除。`);
-            loadUsers(); // 重新載入列表
+            loadUsers(); 
         } catch (err) {
             alert(`刪除失敗: ${err.message}`);
         }
@@ -203,7 +201,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 newPasswordInput.value = "";
                 createUserButton.disabled = false;
                 createUserButton.textContent = "建立用戶";
-                loadUsers(); // 重新載入列表
+                loadUsers(); 
             })
             .catch(err => {
                 createError.textContent = `建立失敗: ${err.message}`;
