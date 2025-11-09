@@ -314,7 +314,7 @@ textarea { height: 80px; text-align: left; padding: 10px; }
     .grid-stack-one-column-mode .grid-stack-item-content,
     .grid-stack-one-column-mode .admin-card {
         height: auto !important;
-        min-height: 200px; 
+        min-height: 200px; /* 給個最小高度, 避免空卡片 */
         position: relative !important;
      }
 }
