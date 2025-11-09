@@ -320,13 +320,12 @@ body.is-closed #maintenance-overlay {
         padding: 15px;
         padding-top: 20px;
         
-        /* 【修改】 讓 body 至少填滿整個螢幕高度 */
+        /* 讓 body 至少填滿整個螢幕高度 */
         min-height: 100vh; 
         box-sizing: border-box; /* 確保 padding 不會讓 vh 溢出 */
 
-        /* 【修改】 將彈性 (flex) 剩餘空間
-           平均分配到主要區塊的「周圍」，解決底部太空問題 */
-        justify-content: space-around; 
+        /* 【修改】 移除 space-around，讓內容緊湊地靠在頂部 (flex-start) */
+        justify-content: flex-start; 
     }
 
     /* 3. 【修改】將 .content-wrapper 改回垂直堆疊 */
@@ -340,7 +339,7 @@ body.is-closed #maintenance-overlay {
     /* 4. 縮小卡片內距 */
     .card {
         padding: 10px; /* 縮小內距 */
-        /* 【修改】 移除 height: 100%，讓卡片高度自適應 */
+        /* 移除 height: 100%，讓卡片高度自適應 */
     }
 
     /* 5. 讓過號列表更緊湊 */
